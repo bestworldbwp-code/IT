@@ -145,6 +145,51 @@ export default function AssetForm({ assetId, onSaved }) {
             <option value="retired">ปลดระวาง (Retired)</option>
           </select>
         </div>
+
+        {/* ISO 27001 Classification Section */}
+        <div style={{ gridColumn: 'span 2', marginTop: 12, padding: 16, background: '#f1f5f9', borderRadius: 8 }}>
+          <h4 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>ISO 27001 Classification & Lifecycle</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+            <div>
+              <label>Confidentiality</label>
+              <select value={data.confidentiality_level || 'internal'} onChange={(e) => setField('confidentiality_level', e.target.value)}>
+                <option value="public">Public</option>
+                <option value="internal">Internal</option>
+                <option value="confidential">Confidential</option>
+                <option value="restricted">Restricted</option>
+              </select>
+            </div>
+            <div>
+              <label>Integrity</label>
+              <select value={data.integrity_level || 'medium'} onChange={(e) => setField('integrity_level', e.target.value)}>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div>
+              <label>Availability</label>
+              <select value={data.availability_level || 'medium'} onChange={(e) => setField('availability_level', e.target.value)}>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+
+          {data.status === 'retired' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+              <div>
+                <label>วันที่จำหน่ายออก (Disposal Date)</label>
+                <input type="date" value={data.disposal_date || ''} onChange={(e) => setField('disposal_date', e.target.value)} />
+              </div>
+              <div>
+                <label>วิธีการทำลาย/จำหน่าย (Disposal Method)</label>
+                <input value={data.disposal_method || ''} onChange={(e) => setField('disposal_method', e.target.value)} placeholder="เช่น ทำลายฮาร์ดดิสก์/บริจาค" />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {error && <div style={{ color: 'crimson', marginBottom: 16 }}>{error}</div>}
