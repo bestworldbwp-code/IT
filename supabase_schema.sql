@@ -113,6 +113,9 @@ create table if not exists public.spare_parts (
   created_at timestamptz default now()
 );
 
+-- Ensure unique constraints for foreign keys
+alter table public.employees add constraint employees_employee_id_unique unique (employee_id);
+
 -- Loans System
 create table if not exists public.loans (
   id bigint generated always as identity primary key,
