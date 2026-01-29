@@ -119,6 +119,12 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'employees_employee_id_unique') THEN
         ALTER TABLE public.employees ADD CONSTRAINT employees_employee_id_unique UNIQUE (employee_id);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'computers_computer_id_unique') THEN
+        ALTER TABLE public.computers ADD CONSTRAINT computers_computer_id_unique UNIQUE (computer_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'printers_printer_id_unique') THEN
+        ALTER TABLE public.printers ADD CONSTRAINT printers_printer_id_unique UNIQUE (printer_id);
+    END IF;
 END $$;
 
 -- Loans System

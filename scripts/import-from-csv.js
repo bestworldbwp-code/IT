@@ -21,7 +21,7 @@ function loadEnv() {
         if (m) process.env[m[1]] = m[2]
       })
     }
-  } catch {}
+  } catch { }
 }
 
 loadEnv()
@@ -55,7 +55,7 @@ async function importEmployees() {
   }
   const rows = readCsv(file)
   if (!rows.length) return
-  const { error } = await client.from('employees').insert(rows, { defaultToNull: true })
+  const { error } = await client.from('employees').upsert(rows, { onConflict: 'employee_id' })
   if (error) throw new Error('employees: ' + error.message)
   console.log(`Imported employees: ${rows.length}`)
 }
@@ -67,7 +67,9 @@ async function importComputers() {
     return
   }
   const rows = readCsv(file)
-  const mapped = rows.map((r) => ({
+
+  // 1. Insert into computers table
+  const mappedComp = rows.map((r) => ({
     computer_id: r.computer_id || null,
     spec: r.spec || null,
     repair_history: r.repair_history || null,
@@ -76,9 +78,21 @@ async function importComputers() {
     loan_borrower_name: r.loan_borrower_name || null,
     remarks: r.remarks || null,
   }))
-  const { error } = await client.from('computers').insert(mapped, { defaultToNull: true })
-  if (error) throw new Error('computers: ' + error.message)
-  console.log(`Imported computers: ${mapped.length}`)
+  const { error: err1 } = await client.from('computers').upsert(mappedComp, { onConflict: 'computer_id' })
+  if (err1) throw new Error('computers: ' + err1.message)
+
+  // 2. Insert into master assets table
+  const masterAssets = rows.map((r) => ({
+    asset_tag: r.computer_id,
+    model: r.spec,
+    category: 'Computer',
+    status: 'in_use',
+    owner: r.user_id,
+  }))
+  const { error: err2 } = await client.from('assets').upsert(masterAssets, { onConflict: 'asset_tag' })
+  if (err2) throw new Error('assets(comp): ' + err2.message)
+
+  console.log(`Imported computers: ${mappedComp.length}`)
 }
 
 async function importPrinters() {
@@ -88,14 +102,28 @@ async function importPrinters() {
     return
   }
   const rows = readCsv(file)
-  const mapped = rows.map((r) => ({
+
+  // 1. Insert into printers table
+  const mappedPrint = rows.map((r) => ({
     printer_id: r.printer_id || null,
     model: r.model || null,
     user_id: r.user_id || null,
   }))
-  const { error } = await client.from('printers').insert(mapped, { defaultToNull: true })
-  if (error) throw new Error('printers: ' + error.message)
-  console.log(`Imported printers: ${mapped.length}`)
+  const { error: err1 } = await client.from('printers').upsert(mappedPrint, { onConflict: 'printer_id' })
+  if (err1) throw new Error('printers: ' + err1.message)
+
+  // 2. Insert into master assets table
+  const masterAssets = rows.map((r) => ({
+    asset_tag: r.printer_id,
+    model: r.model,
+    category: 'Printer',
+    status: 'in_use',
+    owner: r.user_id,
+  }))
+  const { error: err2 } = await client.from('assets').upsert(masterAssets, { onConflict: 'asset_tag' })
+  if (err2) throw new Error('assets(print): ' + err2.message)
+
+  console.log(`Imported printers: ${mappedPrint.length}`)
 }
 
 async function main() {
