@@ -1,90 +1,55 @@
--- Create the assets table
-create table public.assets (
+-- Add Classification to Assets (ISO 27001)
+alter table public.assets add column if not exists confidentiality_level text default 'internal'; -- public, internal, confidential, restricted
+alter table public.assets add column if not exists integrity_level text default 'medium'; -- high, medium, low
+alter table public.assets add column if not exists availability_level text default 'medium'; -- high, medium, low
+alter table public.assets add column if not exists disposal_date date;
+alter table public.assets add column if not exists disposal_method text;
+
+-- Software & Licenses Table
+create table if not exists public.software (
   id bigint generated always as identity primary key,
-  asset_tag text not null,
-  serial text not null,
-  model text,
-  cpu text,
-  ram text,
-  storage text,
-  owner text,
-  location text,
-  purchase_date date,
-  warranty_expiry date,
-  status text default 'in_use' not null,
+  name text not null,
+  version text,
+  license_key text,
+  license_type text, -- perpetual, subscription, open_source
+  expiry_date date,
+  total_licenses integer default 1,
+  assigned_to text,
+  vendor text,
   created_at timestamptz default now()
 );
+alter table public.software enable row level security;
+create policy "software read for all" on public.software for select using (true);
+create policy "software insert for all" on public.software for insert with check (true);
+create policy "software update for all" on public.software for update using (true);
 
--- Enable Row Level Security (RLS)
-alter table public.assets enable row level security;
-
--- Create policies to allow access
--- Note: For a simple start, we allow public read/write. 
--- In production, you should restrict this to authenticated users only.
-
--- Policy for reading (Select)
-create policy "Enable read access for all users"
-on public.assets for select
-using (true);
-
--- Policy for inserting (Insert)
-create policy "Enable insert for all users"
-on public.assets for insert
-with check (true);
-
--- Policy for updating (Update)
-create policy "Enable update for all users"
-on public.assets for update
-using (true);
-
--- ================================================================
--- Additional tables for existing CSVs: computers, employees, printers
--- ================================================================
-
--- Computers
-create table if not exists public.computers (
+-- Maintenance Logs Table
+create table if not exists public.maintenance_logs (
   id bigint generated always as identity primary key,
-  computer_id text not null,
-  spec text,
-  repair_history text,
-  user_id text,
-  asset_type text,
-  loan_borrower_name text,
-  remarks text,
+  asset_id bigint references public.assets(id) on delete cascade,
+  log_type text not null, -- repair, inspection, update, backup_check
+  description text,
+  performed_by text,
+  cost decimal(12,2) default 0,
+  next_check_date date,
   created_at timestamptz default now()
 );
-alter table public.computers enable row level security;
-create policy if not exists "computers read for all" on public.computers for select using (true);
-create policy if not exists "computers insert for all" on public.computers for insert with check (true);
-create policy if not exists "computers update for all" on public.computers for update using (true);
+alter table public.maintenance_logs enable row level security;
+create policy "maintenance read for all" on public.maintenance_logs for select using (true);
+create policy "maintenance insert for all" on public.maintenance_logs for insert with check (true);
+create policy "maintenance update for all" on public.maintenance_logs for update using (true);
 
--- Employees
-create table if not exists public.employees (
+-- Audit Trail Table
+create table if not exists public.audit_logs (
   id bigint generated always as identity primary key,
-  employee_id text not null,
-  name text,
-  position text,
-  department text,
-  email text,
-  username text,
-  desk_phone text,
-  user_share_drive_path text,
+  action text not null, -- INSERT, UPDATE, DELETE
+  table_name text not null,
+  record_id text,
+  old_data jsonb,
+  new_data jsonb,
+  performed_by text,
   created_at timestamptz default now()
 );
-alter table public.employees enable row level security;
-create policy if not exists "employees read for all" on public.employees for select using (true);
-create policy if not exists "employees insert for all" on public.employees for insert with check (true);
-create policy if not exists "employees update for all" on public.employees for update using (true);
-
--- Printers
-create table if not exists public.printers (
-  id bigint generated always as identity primary key,
-  printer_id text not null,
-  model text,
-  user_id text,
-  created_at timestamptz default now()
-);
-alter table public.printers enable row level security;
-create policy if not exists "printers read for all" on public.printers for select using (true);
-create policy if not exists "printers insert for all" on public.printers for insert with check (true);
-create policy if not exists "printers update for all" on public.printers for update using (true);
+alter table public.audit_logs enable row level security;
+create policy "audit_logs read for all" on public.audit_logs for select using (true);
+create policy "audit_logs insert for all" on public.audit_logs for insert with check (true);
