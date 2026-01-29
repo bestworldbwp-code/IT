@@ -113,6 +113,19 @@ create table if not exists public.spare_parts (
   created_at timestamptz default now()
 );
 
+-- Loans System
+create table if not exists public.loans (
+  id bigint generated always as identity primary key,
+  asset_id bigint references public.assets(id) on delete cascade,
+  employee_id text references public.employees(employee_id),
+  loan_date date default current_date,
+  due_date date,
+  return_date date,
+  status text check (status in ('active', 'returned', 'overdue')) default 'active',
+  remarks text,
+  created_at timestamptz default now()
+);
+
 -- RLS
 alter table public.assets enable row level security;
 alter table public.computers enable row level security;
@@ -122,6 +135,7 @@ alter table public.software enable row level security;
 alter table public.maintenance_logs enable row level security;
 alter table public.audit_logs enable row level security;
 alter table public.spare_parts enable row level security;
+alter table public.loans enable row level security;
 
 create policy "assets_all" on public.assets for all using (true) with check (true);
 create policy "computers_all" on public.computers for all using (true) with check (true);
@@ -131,3 +145,4 @@ create policy "software_all" on public.software for all using (true) with check 
 create policy "maintenance_all" on public.maintenance_logs for all using (true) with check (true);
 create policy "audit_all" on public.audit_logs for all using (true) with check (true);
 create policy "spare_parts_all" on public.spare_parts for all using (true) with check (true);
+create policy "loans_all" on public.loans for all using (true) with check (true);

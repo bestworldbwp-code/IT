@@ -14,6 +14,8 @@ import MaintenanceList from './components/MaintenanceList.jsx'
 import MaintenanceForm from './components/MaintenanceForm.jsx'
 import SparePartsList from './components/SparePartsList.jsx'
 import SparePartsForm from './components/SparePartsForm.jsx'
+import LoanList from './components/LoanList.jsx'
+import LoanForm from './components/LoanForm.jsx'
 import { isEnvReady, logAction } from './supabaseClient.js'
 
 export default function App() {
@@ -41,6 +43,7 @@ export default function App() {
     { id: 'software', label: 'ซอฟต์แวร์และลิขสิทธิ์', icon: '💿' },
     { id: 'maintenance', label: 'ประวัติบำรุงรักษา', icon: '🔧' },
     { id: 'spare_parts', label: 'คลังอะไหล่ (Spare Parts)', icon: '🛠️' },
+    { id: 'loans', label: 'ยืม-คืน (Loan System)', icon: '🔄' },
   ]
 
   return (
@@ -133,6 +136,7 @@ export default function App() {
                 {activeTab === 'software' && <SoftwareForm softwareId={editingId} onSaved={handleSaved} />}
                 {activeTab === 'maintenance' && <MaintenanceForm onSaved={handleSaved} />}
                 {activeTab === 'spare_parts' && <SparePartsForm sparePartId={editingId} onSaved={handleSaved} />}
+                {activeTab === 'loans' && <LoanForm onSaved={handleSaved} />}
               </div>
             </div>
           ) : (
@@ -220,6 +224,17 @@ export default function App() {
                     {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ เพิ่มรายการใหม่</button>}
                   </div>
                   <SparePartsList onEdit={handleEdit} readOnly={role === 'viewer'} />
+                </>
+              )}
+              {activeTab === 'loans' && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+                    <div>
+                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>ระบบยืม-คืน (Loan System)</h1>
+                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>ติดตามการยืม-คืนอุปกรณ์และโน้ตบุ๊ก</p>
+                    </div>
+                  </div>
+                  <LoanList onNewLoan={() => setIsAdding(true)} readOnly={role === 'viewer'} />
                 </>
               )}
             </div>
