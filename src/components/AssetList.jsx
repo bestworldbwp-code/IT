@@ -33,7 +33,7 @@ export default function AssetList({ onEdit }) {
     setItems(data || [])
   }
 
-  async function handleDelete(id) {
+  async function deleteItem(id) {
     if (!confirm('ยืนยันการลบทรัพย์สินนี้?')) return
     const client = getSupabase()
     const { error: err } = await client.from('assets').delete().eq('id', id)
@@ -43,6 +43,22 @@ export default function AssetList({ onEdit }) {
       load()
     }
   }
+
+  const exportToCSV = () => {
+    if (!items.length) return
+    const headers = ['Asset Tag', 'Serial', 'Model', 'CPU', 'RAM', 'Storage', 'Owner', 'Location', 'Purchase Date', 'Status', 'Confidentiality']
+    const csvData = items.map(it => [
+      it.asset_tag, it.serial, it.model, it.cpu, it.ram, it.storage, it.owner, it.location, it.purchase_date, it.status, it.confidentiality_level
+    ].map(v => `"${v || ''}"`).join(','))
+
+    const blob = new Blob([headers.join(',') + '\n' + csvData.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `it_assets_export_${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+  }
+
+  const [qrUrl, setQrUrl] = useState(null)
 
   useEffect(() => {
     const timer = setTimeout(load, 300)
