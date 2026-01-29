@@ -116,8 +116,6 @@ export default function App() {
       {/* Main Content */}
       <main style={{ flex: 1, padding: '40px 60px', overflowY: 'auto', background: '#f8fafc' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          {activeTab === 'home' && !isAdding && <Dashboard />}
-
           {isAdding ? (
             <div>
               <button
