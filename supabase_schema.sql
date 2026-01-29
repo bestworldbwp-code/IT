@@ -52,4 +52,19 @@ create table if not exists public.audit_logs (
 );
 alter table public.audit_logs enable row level security;
 create policy "audit_logs read for all" on public.audit_logs for select using (true);
-create policy "audit_logs insert for all" on public.audit_logs for insert with check (true);
+-- Spare Parts & Consumables Table
+create table if not exists public.spare_parts (
+  id bigint generated always as identity primary key,
+  name text not null,
+  category text, -- mouse, keyboard, toner, cable, ram, etc.
+  stock_quantity integer default 0,
+  min_stock_level integer default 5,
+  location text,
+  remarks text,
+  created_at timestamptz default now()
+);
+alter table public.spare_parts enable row level security;
+create policy "spare_parts read for all" on public.spare_parts for select using (true);
+create policy "spare_parts insert for all" on public.spare_parts for insert with check (true);
+create policy "spare_parts update for all" on public.spare_parts for update using (true);
+create policy "spare_parts delete for all" on public.spare_parts for delete using (true);

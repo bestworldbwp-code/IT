@@ -1,28 +1,57 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 
-export default function MaintenanceList({ onEdit }) {
+export default function MaintenanceList({ readOnly }) {
     const [items, setItems] = useState([])
     const [loading, setLoading] = useState(false)
+    const [search, setSearch] = useState('')
 
     async function load() {
         const client = getSupabase()
         if (!client) return
         setLoading(true)
-        const { data, error } = await client
+        let query = client
             .from('maintenance_logs')
-            .select('*, assets(asset_tag, model)')
+            .select('*, assets(asset_tag, model), asset_id, next_check_date')
             .order('created_at', { ascending: false })
+
+        if (search) {
+            query = query.or(`description.ilike.%${search}%,log_type.ilike.%${search}%,performed_by.ilike.%${search}%`)
+        }
+
+        const { data, error } = await query
         setLoading(false)
         if (!error) setItems(data || [])
     }
 
+    const exportToCSV = () => {
+        if (!items.length) return
+        const headers = ['Asset ID', 'Log Type', 'Description', 'Performed By', 'Cost', 'Next Check']
+        const csvData = items.map(it => [
+            it.asset_id, it.log_type, it.description, it.performed_by, it.cost, it.next_check_date
+        ].map(v => `"${v || ''}"`).join(','))
+        const blob = new Blob([headers.join(',') + '\n' + csvData.join('\n')], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = `it_maintenance_${new Date().toISOString().split('T')[0]}.csv`
+        link.click()
+    }
+
     useEffect(() => {
         load()
-    }, [])
+    }, [search])
 
     return (
         <div>
+            <div className="card" style={{ marginBottom: 24, display: 'flex', gap: 16 }}>
+                <input
+                    placeholder="ค้นหาคำอธิบาย, ประเภท, หรือผู้ดำเนินการ..."
+                    value={search}
+                    style={{ flex: 1 }}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+                <button className="secondary" onClick={exportToCSV}>📥 Export CSV</button>
+            </div>
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>

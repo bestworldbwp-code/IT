@@ -15,22 +15,26 @@ export default function Dashboard() {
         const client = getSupabase()
         if (!client) return
 
-        const [resAssets, resComps, resSoft, resMain] = await Promise.all([
+        const [resAssets, resComps, resSoft, resMain, resSpare] = await Promise.all([
             client.from('assets').select('id', { count: 'exact' }),
             client.from('computers').select('id', { count: 'exact' }),
             client.from('software').select('id', { count: 'exact' }),
-            client.from('maintenance_logs').select('id', { count: 'exact' })
+            client.from('maintenance_logs').select('id', { count: 'exact' }),
+            client.from('spare_parts').select('id', { count: 'exact' })
         ])
 
-        // Check for expired licenses or warranties
+        // Check for alerts
         const { count: alerts } = await client.from('software').select('id', { count: 'exact' }).lt('expiry_date', new Date().toISOString())
+        const { data: lowStock } = await client.from('spare_parts').select('id')
+            .filter('stock_quantity', 'lte', 'min_stock_level')
 
         setStats({
             assets: resAssets.count || 0,
             computers: resComps.count || 0,
             software: resSoft.count || 0,
             maintenance: resMain.count || 0,
-            alerts: alerts || 0
+            spare: resSpare.count || 0,
+            alerts: (alerts || 0) + (lowStock?.length || 0)
         })
         setLoading(false)
     }
@@ -43,7 +47,7 @@ export default function Dashboard() {
         { label: 'ทรัพยสินทั้งหมด', value: stats.assets, icon: '📦', color: '#3b82f6' },
         { label: 'คอมพิวเตอร์', value: stats.computers, icon: '💻', color: '#10b981' },
         { label: 'ซอฟต์แวร์/ลิขสิทธิ์', value: stats.software, icon: '💿', color: '#8b5cf6' },
-        { label: 'งานบำรุงรักษา', value: stats.maintenance, icon: '🔧', color: '#f59e0b' },
+        { label: 'อะไหล่คงคลัง', value: stats.spare, icon: '🛠️', color: '#ec4899' },
     ]
 
     return (

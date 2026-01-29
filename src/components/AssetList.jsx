@@ -91,7 +91,22 @@ export default function AssetList({ onEdit }) {
           <option value="repair">ซ่อม</option>
           <option value="retired">ปลดระวาง</option>
         </select>
+        <button className="secondary" onClick={exportToCSV}>📥 Export CSV</button>
       </div>
+
+      {qrUrl && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }} onClick={() => setQrUrl(null)}>
+          <div className="card" style={{ textAlign: 'center', padding: 40 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 20 }}>Asset QR Code</h3>
+            <img src={qrUrl} alt="QR Code" style={{ width: 200, height: 200, marginBottom: 20 }} />
+            <div style={{ fontWeight: 600, fontSize: '1.2rem' }}>{qrUrl.split('data=')[1]}</div>
+            <button className="primary" style={{ marginTop: 20, width: '100%' }} onClick={() => setQrUrl(null)}>ปิด</button>
+          </div>
+        </div>
+      )}
 
       {error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
 
@@ -100,43 +115,38 @@ export default function AssetList({ onEdit }) {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
               <th style={{ padding: '16px 24px' }}>Asset Tag / Serial</th>
-              <th style={{ padding: '16px 24px' }}>Spec</th>
-              <th style={{ padding: '16px 24px' }}>ผู้ถือครอง / สถานที่</th>
-              <th style={{ padding: '16px 24px' }}>สถานะ</th>
-              <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+              <th style={{ padding: '16px 24px' }}>Model / Spec</th>
+              <th style={{ padding: '16px 24px' }}>Owner / Location</th>
+              <th style={{ padding: '16px 24px' }}>Status</th>
+              <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {items.map((it) => (
               <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
                 <td style={{ padding: '16px 24px' }}>
-                  <div style={{ fontWeight: 600 }}>{it.asset_tag}</div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.serial}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--primary)' }}>{it.asset_tag}</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>S/N: {it.serial}</div>
                 </td>
                 <td style={{ padding: '16px 24px' }}>
-                  <div>{it.model}</div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                    {it.cpu} • {it.ram} • {it.storage}
-                  </div>
+                  <div style={{ fontWeight: 500 }}>{it.model}</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.cpu} / {it.ram} / {it.storage}</div>
                 </td>
                 <td style={{ padding: '16px 24px' }}>
                   <div>{it.owner || '-'}</div>
                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.location || '-'}</div>
                 </td>
                 <td style={{ padding: '16px 24px' }}>
-                  <span style={{
-                    padding: '4px 10px',
-                    borderRadius: 20,
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    background: getStatusColor(it.status)
-                  }}>
-                    {getStatusText(it.status)}
+                  <span className={`status-badge status-${it.status}`}>
+                    {it.status === 'in_use' ? 'ใช้งาน' : it.status === 'stock' ? 'สำรอง' : it.status === 'repair' ? 'ส่งซ่อม' : 'ปลดระวาง'}
                   </span>
                 </td>
                 <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                  <button onClick={() => onEdit(it.id)} style={{ marginRight: 8, padding: '4px 12px' }}>แก้ไข</button>
-                  <button onClick={() => handleDelete(it.id)} style={{ padding: '4px 12px', color: 'crimson' }}>ลบ</button>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${it.asset_tag}`)}>QR</button>
+                    <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>
+                    <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it.id)}>ลบ</button>
+                  </div>
                 </td>
               </tr>
             ))}

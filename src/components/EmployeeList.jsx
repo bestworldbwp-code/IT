@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 
-export default function EmployeeList({ onEdit }) {
+export default function EmployeeList({ onEdit, readOnly }) {
     const [items, setItems] = useState([])
     const [loading, setLoading] = useState(false)
     const [search, setSearch] = useState('')
@@ -19,6 +19,19 @@ export default function EmployeeList({ onEdit }) {
         if (!error) setItems(data || [])
     }
 
+    const exportToCSV = () => {
+        if (!items.length) return
+        const headers = ['Employee ID', 'Name', 'Position', 'Department', 'Email', 'Username']
+        const csvData = items.map(it => [
+            it.employee_id, it.name, it.position, it.department, it.email, it.username
+        ].map(v => `"${v || ''}"`).join(','))
+        const blob = new Blob([headers.join(',') + '\n' + csvData.join('\n')], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = `it_employees_${new Date().toISOString().split('T')[0]}.csv`
+        link.click()
+    }
+
     useEffect(() => {
         const timer = setTimeout(load, 300)
         return () => clearTimeout(timer)
@@ -26,12 +39,14 @@ export default function EmployeeList({ onEdit }) {
 
     return (
         <div>
-            <div className="card" style={{ marginBottom: 24 }}>
+            <div className="card" style={{ marginBottom: 24, display: 'flex', gap: 16 }}>
                 <input
-                    placeholder="ค้นหาชื่อพนักงาน, รหัส, หรือแผนก..."
+                    placeholder="ค้นหาชื่อ, รหัสพนักงาน, หรือแผนก..."
                     value={search}
+                    style={{ flex: 1 }}
                     onChange={(e) => setSearch(e.target.value)}
                 />
+                <button className="secondary" onClick={exportToCSV}>📥 Export CSV</button>
             </div>
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -59,7 +74,7 @@ export default function EmployeeList({ onEdit }) {
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.desk_phone}</div>
                                 </td>
                                 <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                                    <button onClick={() => onEdit(it.id)}>แก้ไข</button>
+                                    {!readOnly && <button onClick={() => onEdit(it.id)}>แก้ไข</button>}
                                 </td>
                             </tr>
                         ))}

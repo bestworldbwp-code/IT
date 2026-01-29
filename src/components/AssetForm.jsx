@@ -189,6 +189,14 @@ export default function AssetForm({ assetId, onSaved }) {
               </div>
             </div>
           )}
+          <div style={{ marginTop: 12 }}>
+            <label>Link เอกสารอ้างอิง (Google Drive/Share Point)</label>
+            <input
+              value={data.document_url || ''}
+              onChange={(e) => setField('document_url', e.target.value)}
+              placeholder="เช่น Link ใบเสร็จ หรือ ใบรับประกัน"
+            />
+          </div>
         </div>
       </div>
 
