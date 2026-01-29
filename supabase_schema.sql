@@ -113,8 +113,13 @@ create table if not exists public.spare_parts (
   created_at timestamptz default now()
 );
 
--- Ensure unique constraints for foreign keys
-alter table public.employees add constraint employees_employee_id_unique unique (employee_id);
+-- Ensure unique constraints for foreign keys (Safe check)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'employees_employee_id_unique') THEN
+        ALTER TABLE public.employees ADD CONSTRAINT employees_employee_id_unique UNIQUE (employee_id);
+    END IF;
+END $$;
 
 -- Loans System
 create table if not exists public.loans (
@@ -140,12 +145,34 @@ alter table public.audit_logs enable row level security;
 alter table public.spare_parts enable row level security;
 alter table public.loans enable row level security;
 
-create policy "assets_all" on public.assets for all using (true) with check (true);
-create policy "computers_all" on public.computers for all using (true) with check (true);
-create policy "employees_all" on public.employees for all using (true) with check (true);
-create policy "printers_all" on public.printers for all using (true) with check (true);
-create policy "software_all" on public.software for all using (true) with check (true);
-create policy "maintenance_all" on public.maintenance_logs for all using (true) with check (true);
-create policy "audit_all" on public.audit_logs for all using (true) with check (true);
-create policy "spare_parts_all" on public.spare_parts for all using (true) with check (true);
-create policy "loans_all" on public.loans for all using (true) with check (true);
+-- Idempotent Policies
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'assets_all') THEN
+        CREATE POLICY "assets_all" ON public.assets FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'computers_all') THEN
+        CREATE POLICY "computers_all" ON public.computers FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'employees_all') THEN
+        CREATE POLICY "employees_all" ON public.employees FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'printers_all') THEN
+        CREATE POLICY "printers_all" ON public.printers FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'software_all') THEN
+        CREATE POLICY "software_all" ON public.software FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'maintenance_all') THEN
+        CREATE POLICY "maintenance_all" ON public.maintenance_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'audit_all') THEN
+        CREATE POLICY "audit_all" ON public.audit_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'spare_parts_all') THEN
+        CREATE POLICY "spare_parts_all" ON public.spare_parts FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'loans_all') THEN
+        CREATE POLICY "loans_all" ON public.loans FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+END $$;
