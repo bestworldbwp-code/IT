@@ -1,6 +1,7 @@
 -- [Extended Fields for Legacy Data Migration]
 alter table public.computers add column if not exists repair_history text;
 alter table public.employees add column if not exists user_share_drive_path text;
+alter table public.assets add column if not exists category text;
 
 -- [Full Schema Definitions for New Supabase Project]
 -- Assets
