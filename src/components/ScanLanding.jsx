@@ -59,10 +59,6 @@ export default function ScanLanding({ assetTag, onRepair, onLoan, onClose }) {
                         </div>
                     </>
                 )}
-
-                <button className="secondary" style={{ marginTop: 24, width: '100%' }} onClick={onClose}>
-                    เข้าสู่ระบบจัดการทั้งหมด
-                </button>
             </div>
         </div>
     )
