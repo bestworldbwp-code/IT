@@ -141,8 +141,26 @@ create table if not exists public.loans (
   created_at timestamptz default now()
 );
 
+-- Repair Requests (ระบบแจ้งซ่อม)
+create table if not exists public.repair_requests (
+  id bigint generated always as identity primary key,
+  asset_id bigint references public.assets(id) on delete set null,
+  device_name text,
+  reporter_name text,
+  location text,
+  problem text not null,
+  priority text check (priority in ('low', 'normal', 'high', 'urgent')) default 'normal',
+  status text check (status in ('pending', 'in_progress', 'done')) default 'pending',
+  handled_by text,
+  resolution text,
+  cost numeric(12,2) default 0,
+  created_at timestamptz default now(),
+  completed_at timestamptz
+);
+
 -- RLS
 alter table public.assets enable row level security;
+alter table public.repair_requests enable row level security;
 alter table public.computers enable row level security;
 alter table public.employees enable row level security;
 alter table public.printers enable row level security;
@@ -181,5 +199,8 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'loans_all') THEN
         CREATE POLICY "loans_all" ON public.loans FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'repair_requests_all') THEN
+        CREATE POLICY "repair_requests_all" ON public.repair_requests FOR ALL USING (true) WITH CHECK (true);
     END IF;
 END $$;

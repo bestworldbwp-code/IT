@@ -10,7 +10,7 @@ const initial = {
     next_check_date: '',
 }
 
-export default function MaintenanceForm({ onSaved }) {
+export default function MaintenanceForm({ maintenanceId, onSaved }) {
     const [data, setData] = useState(initial)
     const [loading, setLoading] = useState(false)
     const [assets, setAssets] = useState([])
@@ -24,11 +24,34 @@ export default function MaintenanceForm({ onSaved }) {
         loadAssets()
     }, [])
 
+    useEffect(() => {
+        async function loadRecord() {
+            if (!maintenanceId) {
+                setData(initial)
+                return
+            }
+            const client = getSupabase()
+            const { data: rec } = await client.from('maintenance_logs').select('*').eq('id', maintenanceId).single()
+            if (rec) setData({
+                asset_id: rec.asset_id ?? '',
+                log_type: rec.log_type ?? 'inspection',
+                description: rec.description ?? '',
+                performed_by: rec.performed_by ?? '',
+                cost: rec.cost ?? 0,
+                next_check_date: rec.next_check_date ?? '',
+            })
+        }
+        loadRecord()
+    }, [maintenanceId])
+
     async function handleSubmit(e) {
         e.preventDefault()
         const client = getSupabase()
         setLoading(true)
-        const { error } = await client.from('maintenance_logs').insert(data)
+        const payload = { ...data, next_check_date: data.next_check_date || null }
+        const { error } = maintenanceId
+            ? await client.from('maintenance_logs').update(payload).eq('id', maintenanceId)
+            : await client.from('maintenance_logs').insert(payload)
         setLoading(false)
         if (!error) onSaved()
         else alert(error.message)
@@ -36,7 +59,7 @@ export default function MaintenanceForm({ onSaved }) {
 
     return (
         <form onSubmit={handleSubmit}>
-            <h2 style={{ marginBottom: 24 }}>บันทึกการบำรุงรักษา/ซ่อมแซม</h2>
+            <h2 style={{ marginBottom: 24 }}>{maintenanceId ? 'แก้ไขประวัติการบำรุงรักษา' : 'บันทึกการบำรุงรักษา/ซ่อมแซม'}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div style={{ gridColumn: 'span 2' }}>
                     <label>อ้างอิงทรัพย์สิน *</label>
@@ -72,7 +95,7 @@ export default function MaintenanceForm({ onSaved }) {
                 </div>
             </div>
             <button className="primary" style={{ width: '100%', marginTop: 24 }} type="submit" disabled={loading}>
-                {loading ? 'กำลังบันทึก...' : 'บันทึกประวัติ'}
+                {loading ? 'กำลังบันทึก...' : (maintenanceId ? 'บันทึกการแก้ไข' : 'บันทึกประวัติ')}
             </button>
         </form>
     )

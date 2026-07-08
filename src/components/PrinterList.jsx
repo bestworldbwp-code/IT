@@ -19,6 +19,14 @@ export default function PrinterList({ onEdit, readOnly }) {
         if (!error) setItems(data || [])
     }
 
+    async function deleteItem(id) {
+        if (!confirm('ยืนยันการลบรายการนี้?')) return
+        const client = getSupabase()
+        const { error } = await client.from('printers').delete().eq('id', id)
+        if (error) alert(error.message)
+        else load()
+    }
+
     const exportToCSV = () => {
         if (!items.length) return
         const headers = ['Printer ID', 'Model', 'User ID']
@@ -66,7 +74,12 @@ export default function PrinterList({ onEdit, readOnly }) {
                                 <td style={{ padding: '16px 24px' }}>{it.model}</td>
                                 <td style={{ padding: '16px 24px' }}>{it.user_id || '-'}</td>
                                 <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                                    {!readOnly && <button onClick={() => onEdit(it.id)}>แก้ไข</button>}
+                                    {!readOnly && (
+                                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                            <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>
+                                            <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it.id)}>ลบ</button>
+                                        </div>
+                                    )}
                                 </td>
                             </tr>
                         ))}

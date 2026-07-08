@@ -55,6 +55,27 @@ button.primary:hover:not(:disabled) {
   background: var(--primary-hover);
 }
 
+button.secondary {
+  background: white;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+}
+
+button.secondary:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+button.danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+button.danger:hover:not(:disabled) {
+  background: #dc2626;
+  color: white;
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;

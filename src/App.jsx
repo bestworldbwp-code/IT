@@ -16,13 +16,31 @@ import SparePartsList from './components/SparePartsList.jsx'
 import SparePartsForm from './components/SparePartsForm.jsx'
 import LoanList from './components/LoanList.jsx'
 import LoanForm from './components/LoanForm.jsx'
-import { isEnvReady, logAction } from './supabaseClient.js'
+import RepairList from './components/RepairList.jsx'
+import RepairForm from './components/RepairForm.jsx'
+import { isEnvReady, logAction, getSupabase } from './supabaseClient.js'
+import { useEffect } from 'react'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home')
   const [editingId, setEditingId] = useState(null)
   const [isAdding, setIsAdding] = useState(false)
   const [role, setRole] = useState('admin') // Simple role: admin, viewer
+  const [pendingRepairs, setPendingRepairs] = useState(0)
+
+  async function loadPendingRepairs() {
+    const client = getSupabase()
+    if (!client) return
+    const { count } = await client
+      .from('repair_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+    setPendingRepairs(count || 0)
+  }
+
+  useEffect(() => {
+    loadPendingRepairs()
+  }, [activeTab, isAdding])
 
   const handleEdit = (id) => {
     setEditingId(id)
@@ -41,6 +59,7 @@ export default function App() {
     { id: 'printers', label: 'เครื่องพิมพ์ (Printers)', icon: '🖨️' },
     { id: 'employees', label: 'ทะเบียนพนักงาน', icon: '👥' },
     { id: 'software', label: 'ซอฟต์แวร์และลิขสิทธิ์', icon: '💿' },
+    { id: 'repairs', label: 'แจ้งซ่อม (Repair)', icon: '🛎️', badge: pendingRepairs },
     { id: 'maintenance', label: 'ประวัติบำรุงรักษา', icon: '🔧' },
     { id: 'spare_parts', label: 'คลังอะไหล่ (Spare Parts)', icon: '🛠️' },
     { id: 'loans', label: 'ยืม-คืน (Loan System)', icon: '🔄' },
@@ -86,7 +105,24 @@ export default function App() {
             }}
           >
             <span>{item.icon}</span>
-            {item.label}
+            <span style={{ flex: 1 }}>{item.label}</span>
+            {item.badge > 0 && (
+              <span style={{
+                background: '#dc2626',
+                color: 'white',
+                borderRadius: 999,
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                minWidth: 20,
+                height: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 6px'
+              }}>
+                {item.badge}
+              </span>
+            )}
           </button>
         ))}
 
@@ -134,9 +170,10 @@ export default function App() {
                 {activeTab === 'employees' && <EmployeeForm employeeId={editingId} onSaved={handleSaved} />}
                 {activeTab === 'printers' && <PrinterForm printerId={editingId} onSaved={handleSaved} />}
                 {activeTab === 'software' && <SoftwareForm softwareId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'maintenance' && <MaintenanceForm onSaved={handleSaved} />}
+                {activeTab === 'maintenance' && <MaintenanceForm maintenanceId={editingId} onSaved={handleSaved} />}
                 {activeTab === 'spare_parts' && <SparePartsForm sparePartId={editingId} onSaved={handleSaved} />}
                 {activeTab === 'loans' && <LoanForm onSaved={handleSaved} />}
+                {activeTab === 'repairs' && <RepairForm onSaved={handleSaved} />}
               </div>
             </div>
           ) : (
@@ -211,7 +248,7 @@ export default function App() {
                     </div>
                     {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ บันทึกงานซ่อม/บำรุง</button>}
                   </div>
-                  <MaintenanceList readOnly={role === 'viewer'} />
+                  <MaintenanceList onEdit={handleEdit} readOnly={role === 'viewer'} />
                 </>
               )}
               {activeTab === 'spare_parts' && (
@@ -235,6 +272,17 @@ export default function App() {
                     </div>
                   </div>
                   <LoanList onNewLoan={() => setIsAdding(true)} readOnly={role === 'viewer'} />
+                </>
+              )}
+              {activeTab === 'repairs' && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+                    <div>
+                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>ระบบแจ้งซ่อม (Repair Request)</h1>
+                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>รับแจ้งซ่อม ติดตามสถานะ และปิดงานพร้อมบันทึกประวัติบำรุงรักษาอัตโนมัติ</p>
+                    </div>
+                  </div>
+                  <RepairList onNewRepair={() => setIsAdding(true)} readOnly={role === 'viewer'} />
                 </>
               )}
             </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 
-export default function MaintenanceList({ readOnly }) {
+export default function MaintenanceList({ onEdit, readOnly }) {
     const [items, setItems] = useState([])
     const [loading, setLoading] = useState(false)
     const [search, setSearch] = useState('')
@@ -22,6 +22,14 @@ export default function MaintenanceList({ readOnly }) {
         const { data, error } = await query
         setLoading(false)
         if (!error) setItems(data || [])
+    }
+
+    async function deleteItem(id) {
+        if (!confirm('ยืนยันการลบประวัตินี้?')) return
+        const client = getSupabase()
+        const { error } = await client.from('maintenance_logs').delete().eq('id', id)
+        if (error) alert(error.message)
+        else load()
     }
 
     const exportToCSV = () => {
@@ -61,6 +69,7 @@ export default function MaintenanceList({ readOnly }) {
                             <th style={{ padding: '16px 24px' }}>ประเภทงาน</th>
                             <th style={{ padding: '16px 24px' }}>รายละเอียด</th>
                             <th style={{ padding: '16px 24px' }}>ผู้ดำเนินการ / ค่าใช้จ่าย</th>
+                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -86,10 +95,18 @@ export default function MaintenanceList({ readOnly }) {
                                     <div>{it.performed_by}</div>
                                     <div style={{ fontWeight: 600, color: 'var(--primary)' }}>฿{it.cost?.toLocaleString()}</div>
                                 </td>
+                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                    {!readOnly && (
+                                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                            <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>
+                                            <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it.id)}>ลบ</button>
+                                        </div>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                         {!items.length && !loading && (
-                            <tr><td colSpan="5" style={{ padding: 40, textAlign: 'center' }}>ไม่มีประวัติการบำรุงรักษา</td></tr>
+                            <tr><td colSpan="6" style={{ padding: 40, textAlign: 'center' }}>ไม่มีประวัติการบำรุงรักษา</td></tr>
                         )}
                     </tbody>
                 </table>

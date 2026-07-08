@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 
-export default function AssetList({ onEdit }) {
+export default function AssetList({ onEdit, readOnly }) {
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -160,8 +160,8 @@ export default function AssetList({ onEdit }) {
                 <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${it.asset_tag}`)}>QR</button>
-                    <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>
-                    <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it.id)}>ลบ</button>
+                    {!readOnly && <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>}
+                    {!readOnly && <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it.id)}>ลบ</button>}
                   </div>
                 </td>
               </tr>

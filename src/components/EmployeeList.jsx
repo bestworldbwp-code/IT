@@ -19,6 +19,14 @@ export default function EmployeeList({ onEdit, readOnly }) {
         if (!error) setItems(data || [])
     }
 
+    async function deleteItem(id) {
+        if (!confirm('ยืนยันการลบรายการนี้?')) return
+        const client = getSupabase()
+        const { error } = await client.from('employees').delete().eq('id', id)
+        if (error) alert(error.message)
+        else load()
+    }
+
     const exportToCSV = () => {
         if (!items.length) return
         const headers = ['Employee ID', 'Name', 'Position', 'Department', 'Email', 'Username']
@@ -74,7 +82,12 @@ export default function EmployeeList({ onEdit, readOnly }) {
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.desk_phone}</div>
                                 </td>
                                 <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                                    {!readOnly && <button onClick={() => onEdit(it.id)}>แก้ไข</button>}
+                                    {!readOnly && (
+                                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                            <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>
+                                            <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it.id)}>ลบ</button>
+                                        </div>
+                                    )}
                                 </td>
                             </tr>
                         ))}
