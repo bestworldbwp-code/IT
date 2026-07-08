@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 
-export default function LoanForm({ onSaved, presetAssetId }) {
+export default function LoanForm({ onSaved, presetAssetId, stacked }) {
     const [loading, setLoading] = useState(false)
     const [assets, setAssets] = useState([])
     const [employees, setEmployees] = useState([])
@@ -59,7 +59,7 @@ export default function LoanForm({ onSaved, presetAssetId }) {
 
     return (
         <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '1fr 1fr', gap: 24, marginBottom: 24 }}>
                 <div className="form-group">
                     <label>เลือกเครื่อง / อุปกรณ์</label>
                     <select

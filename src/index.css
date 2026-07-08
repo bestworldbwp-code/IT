@@ -137,6 +137,13 @@ tbody tr:hover {
   background: #eff6ff;
 }
 
+/* Mobile: form grids stack to one column */
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

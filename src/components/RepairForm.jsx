@@ -10,7 +10,7 @@ const initial = {
     priority: 'normal',
 }
 
-export default function RepairForm({ onSaved, presetAssetId }) {
+export default function RepairForm({ onSaved, presetAssetId, stacked }) {
     const [data, setData] = useState(() => presetAssetId ? { ...initial, asset_id: String(presetAssetId) } : initial)
     const [loading, setLoading] = useState(false)
     const [assets, setAssets] = useState([])
@@ -48,7 +48,7 @@ export default function RepairForm({ onSaved, presetAssetId }) {
     return (
         <form onSubmit={handleSubmit}>
             <h2 style={{ marginBottom: 24 }}>แจ้งซ่อมอุปกรณ์</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '1fr 1fr', gap: 20 }}>
                 <div>
                     <label>อ้างอิงทรัพย์สิน (ถ้ามี)</label>
                     <select value={data.asset_id} onChange={(e) => setData({ ...data, asset_id: e.target.value })}>

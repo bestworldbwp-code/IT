@@ -18,7 +18,7 @@ import LoanList from './components/LoanList.jsx'
 import LoanForm from './components/LoanForm.jsx'
 import RepairList from './components/RepairList.jsx'
 import RepairForm from './components/RepairForm.jsx'
-import ScanLanding from './components/ScanLanding.jsx'
+import ScanFlow from './components/ScanFlow.jsx'
 import { isEnvReady, logAction, getSupabase } from './supabaseClient.js'
 import { useEffect } from 'react'
 
@@ -34,20 +34,6 @@ export default function App() {
   const clearScanUrl = () => {
     setScanTag(null)
     window.history.replaceState({}, '', window.location.pathname)
-  }
-
-  const handleScanRepair = (assetId) => {
-    setPresetAssetId(assetId)
-    setActiveTab('repairs')
-    setIsAdding(true)
-    clearScanUrl()
-  }
-
-  const handleScanLoan = (assetId) => {
-    setPresetAssetId(assetId)
-    setActiveTab('loans')
-    setIsAdding(true)
-    clearScanUrl()
   }
 
   async function loadPendingRepairs() {
@@ -75,16 +61,9 @@ export default function App() {
     setPresetAssetId(null)
   }
 
-  // แสดงหน้า Landing เมื่อสแกน QR เข้ามา (?asset=ASSET_TAG)
+  // สแกน QR เข้ามา (?asset=ASSET_TAG) -> โหมดมือถือเฉพาะกิจ ไม่เข้าหน้าแอดมิน
   if (scanTag) {
-    return (
-      <ScanLanding
-        assetTag={scanTag}
-        onRepair={handleScanRepair}
-        onLoan={handleScanLoan}
-        onClose={clearScanUrl}
-      />
-    )
+    return <ScanFlow assetTag={scanTag} onClose={clearScanUrl} />
   }
 
   const navGroups = [
