@@ -76,21 +76,36 @@ export default function AssetList({ onEdit, readOnly }) {
     w.document.close()
   }
 
-  const printAllQR = () => {
-    if (!items.length) return
-    const cards = items.map(it => `
+  const printAllQR = async () => {
+    // เปิดหน้าต่างทันที (เลี่ยงถูก popup blocker บล็อกหลัง await)
+    const w = window.open('', '_blank')
+    if (w) w.document.write('<p style="font-family:sans-serif;padding:20px;">กำลังเตรียมป้าย QR ทั้งหมด...</p>')
+
+    // ดึงทรัพย์สินทั้งหมด (ไม่สนตัวกรอง/ค้นหา) เรียงตาม Asset Tag
+    const client = getSupabase()
+    const { data, error: err } = await client
+      .from('assets')
+      .select('asset_tag, model')
+      .order('asset_tag', { ascending: true })
+
+    if (err) { alert(err.message); if (w) w.close(); return }
+    const all = data || []
+    if (!all.length) { alert('ไม่มีข้อมูลทรัพย์สิน'); if (w) w.close(); return }
+
+    const cards = all.map(it => `
       <div style="border:1px solid #ccc;border-radius:8px;padding:12px;text-align:center;page-break-inside:avoid;">
         <img src="${qrImg(it.asset_tag, 200)}" style="width:150px;height:150px;" />
         <div style="font-size:14px;font-weight:700;margin-top:6px;">${it.asset_tag}</div>
         <div style="font-size:11px;color:#555;">${it.model || ''}</div>
       </div>`).join('')
-    const w = window.open('', '_blank')
+
+    w.document.open()
     w.document.write(`
       <html><head><title>QR Codes - ทรัพย์สินทั้งหมด</title></head>
       <body style="font-family:sans-serif;padding:20px;">
-        <h2>ป้าย QR Code ทรัพย์สิน (${items.length} เครื่อง)</h2>
+        <h2>ป้าย QR Code ทรัพย์สิน (${all.length} เครื่อง)</h2>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">${cards}</div>
-        <script>window.onload=function(){setTimeout(function(){window.print()},600)}<\/script>
+        <script>window.onload=function(){setTimeout(function(){window.print()},800)}<\/script>
       </body></html>`)
     w.document.close()
   }
