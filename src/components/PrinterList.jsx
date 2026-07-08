@@ -61,19 +61,19 @@ export default function PrinterList({ onEdit, readOnly }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '16px 24px' }}>Printer ID</th>
-                            <th style={{ padding: '16px 24px' }}>รุ่น/โมเดล</th>
-                            <th style={{ padding: '16px 24px' }}>ผู้ใช้งานหลัก</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+                            <th style={{ padding: '10px 16px' }}>Printer ID</th>
+                            <th style={{ padding: '10px 16px' }}>รุ่น/โมเดล</th>
+                            <th style={{ padding: '10px 16px' }}>ผู้ใช้งานหลัก</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         {items.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '16px 24px', fontWeight: 600 }}>{it.printer_id}</td>
-                                <td style={{ padding: '16px 24px' }}>{it.model}</td>
-                                <td style={{ padding: '16px 24px' }}>{it.user_id || '-'}</td>
-                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                <td style={{ padding: '10px 16px', fontWeight: 600 }}>{it.printer_id}</td>
+                                <td style={{ padding: '10px 16px' }}>{it.model}</td>
+                                <td style={{ padding: '10px 16px' }}>{it.user_id || '-'}</td>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                     {!readOnly && (
                                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                             <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>

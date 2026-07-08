@@ -170,34 +170,34 @@ export default function AssetList({ onEdit, readOnly }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-              <th style={{ padding: '16px 24px' }}>Asset Tag / Serial</th>
-              <th style={{ padding: '16px 24px' }}>Model / Spec</th>
-              <th style={{ padding: '16px 24px' }}>Owner / Location</th>
-              <th style={{ padding: '16px 24px' }}>Status</th>
-              <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
+              <th style={{ padding: '10px 16px' }}>Asset Tag / Serial</th>
+              <th style={{ padding: '10px 16px' }}>Model / Spec</th>
+              <th style={{ padding: '10px 16px' }}>Owner / Location</th>
+              <th style={{ padding: '10px 16px' }}>Status</th>
+              <th style={{ padding: '10px 16px', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {items.map((it) => (
               <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '16px 24px' }}>
+                <td style={{ padding: '10px 16px' }}>
                   <div style={{ fontWeight: 600, color: 'var(--primary)' }}>{it.asset_tag}</div>
                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>S/N: {it.serial}</div>
                 </td>
-                <td style={{ padding: '16px 24px' }}>
+                <td style={{ padding: '10px 16px' }}>
                   <div style={{ fontWeight: 500 }}>{it.model}</div>
                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.cpu} / {it.ram} / {it.storage}</div>
                 </td>
-                <td style={{ padding: '16px 24px' }}>
+                <td style={{ padding: '10px 16px' }}>
                   <div>{it.owner || '-'}</div>
                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.location || '-'}</div>
                 </td>
-                <td style={{ padding: '16px 24px' }}>
+                <td style={{ padding: '10px 16px' }}>
                   <span className={`status-badge status-${it.status}`}>
                     {it.status === 'in_use' ? 'ใช้งาน' : it.status === 'stock' ? 'สำรอง' : it.status === 'repair' ? 'ส่งซ่อม' : 'ปลดระวาง'}
                   </span>
                 </td>
-                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => setQrAsset(it.asset_tag)}>QR</button>
                     {!readOnly && <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>}

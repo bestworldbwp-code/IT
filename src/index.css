@@ -111,6 +111,32 @@ label {
   box-shadow: var(--shadow);
 }
 
+/* Compact data tables */
+table {
+  font-size: 0.9rem;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f1f5f9;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+tbody tr:hover {
+  background: #eff6ff;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

@@ -87,17 +87,37 @@ export default function App() {
     )
   }
 
-  const navItems = [
-    { id: 'home', label: 'Dashboard', icon: '📊' },
-    { id: 'assets', label: 'ทรัพย์สิน IT (Hardware)', icon: '📦' },
-    { id: 'computers', label: 'คอมพิวเตอร์ (PC/NB)', icon: '💻' },
-    { id: 'printers', label: 'เครื่องพิมพ์ (Printers)', icon: '🖨️' },
-    { id: 'employees', label: 'ทะเบียนพนักงาน', icon: '👥' },
-    { id: 'software', label: 'ซอฟต์แวร์และลิขสิทธิ์', icon: '💿' },
-    { id: 'repairs', label: 'แจ้งซ่อม (Repair)', icon: '🛎️', badge: pendingRepairs },
-    { id: 'maintenance', label: 'ประวัติบำรุงรักษา', icon: '🔧' },
-    { id: 'spare_parts', label: 'คลังอะไหล่ (Spare Parts)', icon: '🛠️' },
-    { id: 'loans', label: 'ยืม-คืน (Loan System)', icon: '🔄' },
+  const navGroups = [
+    {
+      title: null,
+      items: [
+        { id: 'home', label: 'หน้าหลัก', icon: '📊' },
+      ]
+    },
+    {
+      title: 'งานบริการ',
+      items: [
+        { id: 'repairs', label: 'แจ้งซ่อม', icon: '🛎️', badge: pendingRepairs },
+        { id: 'loans', label: 'ยืม-คืน', icon: '🔄' },
+        { id: 'maintenance', label: 'ประวัติบำรุงรักษา', icon: '🔧' },
+      ]
+    },
+    {
+      title: 'ทรัพย์สิน',
+      items: [
+        { id: 'assets', label: 'ทรัพย์สิน IT', icon: '📦' },
+        { id: 'computers', label: 'คอมพิวเตอร์', icon: '💻' },
+        { id: 'printers', label: 'เครื่องพิมพ์', icon: '🖨️' },
+        { id: 'spare_parts', label: 'คลังอะไหล่', icon: '🛠️' },
+      ]
+    },
+    {
+      title: 'ข้อมูลอ้างอิง',
+      items: [
+        { id: 'employees', label: 'ทะเบียนพนักงาน', icon: '👥' },
+        { id: 'software', label: 'ซอฟต์แวร์/ลิขสิทธิ์', icon: '💿' },
+      ]
+    },
   ]
 
   return (
@@ -121,45 +141,65 @@ export default function App() {
           <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Corporate Asset Management</div>
         </div>
 
-        {navItems.map(item => (
-          <button
-            key={item.id}
-            onClick={() => { setActiveTab(item.id); setIsAdding(false); setEditingId(null); }}
-            style={{
-              background: activeTab === item.id ? 'rgba(255,255,255,0.1)' : 'transparent',
-              color: activeTab === item.id ? 'white' : '#94a3b8',
-              border: 'none',
-              textAlign: 'left',
-              padding: '12px 16px',
-              borderRadius: 8,
-              fontSize: '0.95rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              transition: 'all 0.2s'
-            }}
-          >
-            <span>{item.icon}</span>
-            <span style={{ flex: 1 }}>{item.label}</span>
-            {item.badge > 0 && (
-              <span style={{
-                background: '#dc2626',
-                color: 'white',
-                borderRadius: 999,
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                minWidth: 20,
-                height: 20,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '0 6px'
-              }}>
-                {item.badge}
-              </span>
-            )}
-          </button>
-        ))}
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {navGroups.map((group, gi) => (
+            <div key={gi} style={{ marginBottom: 12 }}>
+              {group.title && (
+                <div style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  color: '#64748b',
+                  textTransform: 'uppercase',
+                  padding: '8px 16px 4px'
+                }}>
+                  {group.title}
+                </div>
+              )}
+              {group.items.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id); setIsAdding(false); setEditingId(null); }}
+                  style={{
+                    width: '100%',
+                    background: activeTab === item.id ? 'var(--primary)' : 'transparent',
+                    color: activeTab === item.id ? 'white' : '#cbd5e1',
+                    border: 'none',
+                    textAlign: 'left',
+                    padding: '10px 16px',
+                    borderRadius: 8,
+                    fontSize: '0.9rem',
+                    fontWeight: activeTab === item.id ? 600 : 400,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <span>{item.icon}</span>
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {item.badge > 0 && (
+                    <span style={{
+                      background: '#dc2626',
+                      color: 'white',
+                      borderRadius: 999,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      minWidth: 20,
+                      height: 20,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 6px'
+                    }}>
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
 
         <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
           <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: 8 }}>SESSION ROLE</label>

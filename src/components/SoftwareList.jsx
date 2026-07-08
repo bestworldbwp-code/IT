@@ -61,32 +61,32 @@ export default function SoftwareList({ onEdit, readOnly }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '16px 24px' }}>ชื่อซอฟต์แวร์</th>
-                            <th style={{ padding: '16px 24px' }}>โมเดลลิขสิทธิ์ / สัญญา</th>
-                            <th style={{ padding: '16px 24px' }}>Key / พนักงานที่ถือ</th>
-                            <th style={{ padding: '16px 24px' }}>วันหมดอายุ</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+                            <th style={{ padding: '10px 16px' }}>ชื่อซอฟต์แวร์</th>
+                            <th style={{ padding: '10px 16px' }}>โมเดลลิขสิทธิ์ / สัญญา</th>
+                            <th style={{ padding: '10px 16px' }}>Key / พนักงานที่ถือ</th>
+                            <th style={{ padding: '10px 16px' }}>วันหมดอายุ</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         {items.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div style={{ fontWeight: 600 }}>{it.name}</div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.vendor} (v{it.version})</div>
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div>{it.license_type}</div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>จำนวน: {it.total_licenses}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.license_key || '-'}</div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>ผู้ใช้: {it.assigned_to || '-'}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px', color: (new Date(it.expiry_date) < new Date()) ? 'crimson' : 'inherit' }}>
+                                <td style={{ padding: '10px 16px', color: (new Date(it.expiry_date) < new Date()) ? 'crimson' : 'inherit' }}>
                                     {it.expiry_date || 'N/A'}
                                 </td>
-                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                     {!readOnly && (
                                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                             <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>

@@ -70,21 +70,21 @@ export default function SparePartsList({ onEdit, readOnly }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '16px 24px' }}>รายการอะไหล่ / หมวดหมู่</th>
-                            <th style={{ padding: '16px 24px' }}>สถานที่จัดเก็บ</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'center' }}>จำนวนคงเหลือ</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+                            <th style={{ padding: '10px 16px' }}>รายการอะไหล่ / หมวดหมู่</th>
+                            <th style={{ padding: '10px 16px' }}>สถานที่จัดเก็บ</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'center' }}>จำนวนคงเหลือ</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         {items.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div style={{ fontWeight: 600 }}>{it.name}</div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.category}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>{it.location || '-'}</td>
-                                <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                <td style={{ padding: '10px 16px' }}>{it.location || '-'}</td>
+                                <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
                                         {!readOnly && <button className="secondary" style={{ padding: '4px 8px' }} onClick={() => updateStock(it.id, -1)}>-</button>}
                                         <span style={{
@@ -100,7 +100,7 @@ export default function SparePartsList({ onEdit, readOnly }) {
                                         <div style={{ fontSize: '0.7rem', color: 'crimson', marginTop: 4 }}>ควรสั่งเพิ่ม! (Min: {it.min_stock_level})</div>
                                     )}
                                 </td>
-                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                     {!readOnly && (
                                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                             <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>

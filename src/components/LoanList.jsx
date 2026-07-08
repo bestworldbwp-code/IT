@@ -87,34 +87,34 @@ export default function LoanList({ onNewLoan, readOnly }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '16px 24px' }}>ครุภัณฑ์ / รุ่น</th>
-                            <th style={{ padding: '16px 24px' }}>ผู้ยืม</th>
-                            <th style={{ padding: '16px 24px' }}>วันที่ยืม</th>
-                            <th style={{ padding: '16px 24px' }}>กำหนดคืน</th>
-                            <th style={{ padding: '16px 24px' }}>สถานะ</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+                            <th style={{ padding: '10px 16px' }}>ครุภัณฑ์ / รุ่น</th>
+                            <th style={{ padding: '10px 16px' }}>ผู้ยืม</th>
+                            <th style={{ padding: '10px 16px' }}>วันที่ยืม</th>
+                            <th style={{ padding: '10px 16px' }}>กำหนดคืน</th>
+                            <th style={{ padding: '10px 16px' }}>สถานะ</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         {items.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div style={{ fontWeight: 600 }}>{it.assets?.asset_tag || 'N/A'}</div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.assets?.model}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>{it.employee?.name || it.employee_id}</td>
-                                <td style={{ padding: '16px 24px' }}>{it.loan_date}</td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>{it.employee?.name || it.employee_id}</td>
+                                <td style={{ padding: '10px 16px' }}>{it.loan_date}</td>
+                                <td style={{ padding: '10px 16px' }}>
                                     <span style={{ color: it.status === 'active' && new Date(it.due_date) < new Date() ? 'red' : 'inherit' }}>
                                         {it.due_date}
                                     </span>
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>
                                     <span className={`badge ${it.status}`}>
                                         {it.status === 'active' ? 'กำลังยืม' : it.status === 'returned' ? 'คืนแล้ว' : 'เกินกำหนด'}
                                     </span>
                                 </td>
-                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                     {it.status === 'active' && !readOnly && (
                                         <button className="secondary" onClick={() => markAsReturned(it.id)}>คืนเครื่อง</button>
                                     )}

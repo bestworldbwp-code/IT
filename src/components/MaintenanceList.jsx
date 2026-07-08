@@ -64,23 +64,23 @@ export default function MaintenanceList({ onEdit, readOnly }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '16px 24px' }}>วันที่</th>
-                            <th style={{ padding: '16px 24px' }}>อ้างอิงทรัพย์สิน</th>
-                            <th style={{ padding: '16px 24px' }}>ประเภทงาน</th>
-                            <th style={{ padding: '16px 24px' }}>รายละเอียด</th>
-                            <th style={{ padding: '16px 24px' }}>ผู้ดำเนินการ / ค่าใช้จ่าย</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+                            <th style={{ padding: '10px 16px' }}>วันที่</th>
+                            <th style={{ padding: '10px 16px' }}>อ้างอิงทรัพย์สิน</th>
+                            <th style={{ padding: '10px 16px' }}>ประเภทงาน</th>
+                            <th style={{ padding: '10px 16px' }}>รายละเอียด</th>
+                            <th style={{ padding: '10px 16px' }}>ผู้ดำเนินการ / ค่าใช้จ่าย</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         {items.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '16px 24px' }}>{new Date(it.created_at).toLocaleDateString()}</td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>{new Date(it.created_at).toLocaleDateString()}</td>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div style={{ fontWeight: 600 }}>{it.assets?.asset_tag}</div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.assets?.model}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>
                                     <span style={{
                                         padding: '4px 8px',
                                         borderRadius: 4,
@@ -90,12 +90,12 @@ export default function MaintenanceList({ onEdit, readOnly }) {
                                         {it.log_type}
                                     </span>
                                 </td>
-                                <td style={{ padding: '16px 24px', maxWidth: 300 }}>{it.description}</td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px', maxWidth: 300 }}>{it.description}</td>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div>{it.performed_by}</div>
                                     <div style={{ fontWeight: 600, color: 'var(--primary)' }}>฿{it.cost?.toLocaleString()}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                     {!readOnly && (
                                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                             <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>

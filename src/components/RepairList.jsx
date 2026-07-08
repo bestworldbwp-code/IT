@@ -136,11 +136,11 @@ export default function RepairList({ onNewRepair, readOnly }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '16px 24px' }}>อุปกรณ์ / ผู้แจ้ง</th>
-                            <th style={{ padding: '16px 24px' }}>อาการ</th>
-                            <th style={{ padding: '16px 24px' }}>ความเร่งด่วน</th>
-                            <th style={{ padding: '16px 24px' }}>สถานะ</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+                            <th style={{ padding: '10px 16px' }}>อุปกรณ์ / ผู้แจ้ง</th>
+                            <th style={{ padding: '10px 16px' }}>อาการ</th>
+                            <th style={{ padding: '10px 16px' }}>ความเร่งด่วน</th>
+                            <th style={{ padding: '10px 16px' }}>สถานะ</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -149,17 +149,17 @@ export default function RepairList({ onNewRepair, readOnly }) {
                             const pr = PRIORITY_META[it.priority] || PRIORITY_META.normal
                             return (
                                 <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '16px 24px' }}>
+                                    <td style={{ padding: '10px 16px' }}>
                                         <div style={{ fontWeight: 600 }}>{it.assets?.asset_tag || it.device_name || '-'}</div>
                                         <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                                             แจ้งโดย: {it.reporter_name || '-'}{it.location ? ` · ${it.location}` : ''}
                                         </div>
                                     </td>
-                                    <td style={{ padding: '16px 24px', maxWidth: 320, whiteSpace: 'pre-wrap' }}>{it.problem}</td>
-                                    <td style={{ padding: '16px 24px' }}>
+                                    <td style={{ padding: '10px 16px', maxWidth: 320, whiteSpace: 'pre-wrap' }}>{it.problem}</td>
+                                    <td style={{ padding: '10px 16px' }}>
                                         <span style={{ color: pr.color, fontWeight: 600 }}>{pr.label}</span>
                                     </td>
-                                    <td style={{ padding: '16px 24px' }}>
+                                    <td style={{ padding: '10px 16px' }}>
                                         <span style={{ padding: '4px 10px', borderRadius: 999, fontSize: '0.8rem', fontWeight: 600, background: st.bg, color: st.color }}>
                                             {st.label}
                                         </span>
@@ -169,7 +169,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
                                             </div>
                                         )}
                                     </td>
-                                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                         {!readOnly && (
                                             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                                                 {it.status === 'pending' && (

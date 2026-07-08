@@ -61,27 +61,27 @@ export default function EmployeeList({ onEdit, readOnly }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '16px 24px' }}>รหัสพนักงาน</th>
-                            <th style={{ padding: '16px 24px' }}>ชื่อ-นามสกุล</th>
-                            <th style={{ padding: '16px 24px' }}>ตำแหน่ง / แผนก</th>
-                            <th style={{ padding: '16px 24px' }}>อีเมล / เบอร์ติดต่อ</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+                            <th style={{ padding: '10px 16px' }}>รหัสพนักงาน</th>
+                            <th style={{ padding: '10px 16px' }}>ชื่อ-นามสกุล</th>
+                            <th style={{ padding: '10px 16px' }}>ตำแหน่ง / แผนก</th>
+                            <th style={{ padding: '10px 16px' }}>อีเมล / เบอร์ติดต่อ</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         {items.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '16px 24px' }}>{it.employee_id}</td>
-                                <td style={{ padding: '16px 24px', fontWeight: 600 }}>{it.name}</td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>{it.employee_id}</td>
+                                <td style={{ padding: '10px 16px', fontWeight: 600 }}>{it.name}</td>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div>{it.position}</div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.department}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div>{it.email}</div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.desk_phone}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                     {!readOnly && (
                                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                             <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>

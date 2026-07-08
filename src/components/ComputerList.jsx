@@ -61,23 +61,23 @@ export default function ComputerList({ onEdit, readOnly }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '16px 24px' }}>Computer ID</th>
-                            <th style={{ padding: '16px 24px' }}>Specification</th>
-                            <th style={{ padding: '16px 24px' }}>User / Borrower</th>
-                            <th style={{ padding: '16px 24px' }}>Type</th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>จัดการ</th>
+                            <th style={{ padding: '10px 16px' }}>Computer ID</th>
+                            <th style={{ padding: '10px 16px' }}>Specification</th>
+                            <th style={{ padding: '10px 16px' }}>User / Borrower</th>
+                            <th style={{ padding: '10px 16px' }}>Type</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
                         {items.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '16px 24px', fontWeight: 600 }}>{it.computer_id}</td>
-                                <td style={{ padding: '16px 24px', fontSize: '0.875rem' }}>{it.spec}</td>
-                                <td style={{ padding: '16px 24px' }}>
+                                <td style={{ padding: '10px 16px', fontWeight: 600 }}>{it.computer_id}</td>
+                                <td style={{ padding: '10px 16px', fontSize: '0.875rem' }}>{it.spec}</td>
+                                <td style={{ padding: '10px 16px' }}>
                                     <div>{it.user_id || it.loan_borrower_name || '-'}</div>
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>{it.asset_type}</td>
-                                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                <td style={{ padding: '10px 16px' }}>{it.asset_type}</td>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                     {!readOnly && (
                                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                             <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>
