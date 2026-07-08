@@ -10,8 +10,8 @@ const initial = {
     priority: 'normal',
 }
 
-export default function RepairForm({ onSaved }) {
-    const [data, setData] = useState(initial)
+export default function RepairForm({ onSaved, presetAssetId }) {
+    const [data, setData] = useState(() => presetAssetId ? { ...initial, asset_id: String(presetAssetId) } : initial)
     const [loading, setLoading] = useState(false)
     const [assets, setAssets] = useState([])
 

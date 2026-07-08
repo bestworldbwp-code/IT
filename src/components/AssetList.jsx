@@ -58,7 +58,42 @@ export default function AssetList({ onEdit, readOnly }) {
     link.click()
   }
 
-  const [qrUrl, setQrUrl] = useState(null)
+  const [qrAsset, setQrAsset] = useState(null)
+
+  // ลิงก์ที่ฝังใน QR: สแกนแล้วเปิดแอปมาที่เครื่องนี้ (แจ้งซ่อม/ยืม)
+  const assetUrl = (tag) => `${window.location.origin}${window.location.pathname}?asset=${encodeURIComponent(tag)}`
+  const qrImg = (tag, size = 250) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(assetUrl(tag))}`
+
+  const printSingleQR = (tag) => {
+    const w = window.open('', '_blank')
+    w.document.write(`
+      <html><head><title>QR ${tag}</title></head>
+      <body style="font-family:sans-serif;text-align:center;padding:40px;">
+        <img src="${qrImg(tag, 300)}" style="width:300px;height:300px;" />
+        <div style="font-size:24px;font-weight:700;margin-top:12px;">${tag}</div>
+        <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
+      </body></html>`)
+    w.document.close()
+  }
+
+  const printAllQR = () => {
+    if (!items.length) return
+    const cards = items.map(it => `
+      <div style="border:1px solid #ccc;border-radius:8px;padding:12px;text-align:center;page-break-inside:avoid;">
+        <img src="${qrImg(it.asset_tag, 200)}" style="width:150px;height:150px;" />
+        <div style="font-size:14px;font-weight:700;margin-top:6px;">${it.asset_tag}</div>
+        <div style="font-size:11px;color:#555;">${it.model || ''}</div>
+      </div>`).join('')
+    const w = window.open('', '_blank')
+    w.document.write(`
+      <html><head><title>QR Codes - ทรัพย์สินทั้งหมด</title></head>
+      <body style="font-family:sans-serif;padding:20px;">
+        <h2>ป้าย QR Code ทรัพย์สิน (${items.length} เครื่อง)</h2>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">${cards}</div>
+        <script>window.onload=function(){setTimeout(function(){window.print()},600)}<\/script>
+      </body></html>`)
+    w.document.close()
+  }
 
   useEffect(() => {
     const timer = setTimeout(load, 300)
@@ -108,18 +143,23 @@ export default function AssetList({ onEdit, readOnly }) {
           <option value="retired">ปลดระวาง</option>
         </select>
         <button className="secondary" onClick={exportToCSV}>📥 Export CSV</button>
+        <button className="secondary" onClick={printAllQR}>🏷️ พิมพ์ QR ทั้งหมด</button>
       </div>
 
-      {qrUrl && (
+      {qrAsset && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }} onClick={() => setQrUrl(null)}>
-          <div className="card" style={{ textAlign: 'center', padding: 40 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 20 }}>Asset QR Code</h3>
-            <img src={qrUrl} alt="QR Code" style={{ width: 200, height: 200, marginBottom: 20 }} />
-            <div style={{ fontWeight: 600, fontSize: '1.2rem' }}>{qrUrl.split('data=')[1]}</div>
-            <button className="primary" style={{ marginTop: 20, width: '100%' }} onClick={() => setQrUrl(null)}>ปิด</button>
+        }} onClick={() => setQrAsset(null)}>
+          <div className="card" style={{ textAlign: 'center', padding: 40, maxWidth: 340 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 8 }}>QR Code เครื่องนี้</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 0, marginBottom: 16 }}>สแกนเพื่อแจ้งซ่อม / ยืมเครื่องนี้</p>
+            <img src={qrImg(qrAsset)} alt="QR Code" style={{ width: 220, height: 220, marginBottom: 16 }} />
+            <div style={{ fontWeight: 700, fontSize: '1.3rem' }}>{qrAsset}</div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <button className="secondary" style={{ flex: 1 }} onClick={() => printSingleQR(qrAsset)}>🖨️ พิมพ์</button>
+              <button className="primary" style={{ flex: 1 }} onClick={() => setQrAsset(null)}>ปิด</button>
+            </div>
           </div>
         </div>
       )}
@@ -159,7 +199,7 @@ export default function AssetList({ onEdit, readOnly }) {
                 </td>
                 <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${it.asset_tag}`)}>QR</button>
+                    <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => setQrAsset(it.asset_tag)}>QR</button>
                     {!readOnly && <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>}
                     {!readOnly && <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it.id)}>ลบ</button>}
                   </div>

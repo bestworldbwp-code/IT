@@ -18,6 +18,7 @@ import LoanList from './components/LoanList.jsx'
 import LoanForm from './components/LoanForm.jsx'
 import RepairList from './components/RepairList.jsx'
 import RepairForm from './components/RepairForm.jsx'
+import ScanLanding from './components/ScanLanding.jsx'
 import { isEnvReady, logAction, getSupabase } from './supabaseClient.js'
 import { useEffect } from 'react'
 
@@ -27,6 +28,27 @@ export default function App() {
   const [isAdding, setIsAdding] = useState(false)
   const [role, setRole] = useState('admin') // Simple role: admin, viewer
   const [pendingRepairs, setPendingRepairs] = useState(0)
+  const [presetAssetId, setPresetAssetId] = useState(null)
+  const [scanTag, setScanTag] = useState(() => new URLSearchParams(window.location.search).get('asset'))
+
+  const clearScanUrl = () => {
+    setScanTag(null)
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
+  const handleScanRepair = (assetId) => {
+    setPresetAssetId(assetId)
+    setActiveTab('repairs')
+    setIsAdding(true)
+    clearScanUrl()
+  }
+
+  const handleScanLoan = (assetId) => {
+    setPresetAssetId(assetId)
+    setActiveTab('loans')
+    setIsAdding(true)
+    clearScanUrl()
+  }
 
   async function loadPendingRepairs() {
     const client = getSupabase()
@@ -50,6 +72,19 @@ export default function App() {
   const handleSaved = () => {
     setIsAdding(false)
     setEditingId(null)
+    setPresetAssetId(null)
+  }
+
+  // แสดงหน้า Landing เมื่อสแกน QR เข้ามา (?asset=ASSET_TAG)
+  if (scanTag) {
+    return (
+      <ScanLanding
+        assetTag={scanTag}
+        onRepair={handleScanRepair}
+        onLoan={handleScanLoan}
+        onClose={clearScanUrl}
+      />
+    )
   }
 
   const navItems = [
@@ -159,7 +194,7 @@ export default function App() {
             <div>
               <button
                 className="btn-back"
-                onClick={() => { setIsAdding(false); setEditingId(null); }}
+                onClick={() => { setIsAdding(false); setEditingId(null); setPresetAssetId(null); }}
                 style={{ marginBottom: 24, border: 'none', background: 'none', color: '#64748b' }}
               >
                 ← กลับไปหน้ารายการ
@@ -172,8 +207,8 @@ export default function App() {
                 {activeTab === 'software' && <SoftwareForm softwareId={editingId} onSaved={handleSaved} />}
                 {activeTab === 'maintenance' && <MaintenanceForm maintenanceId={editingId} onSaved={handleSaved} />}
                 {activeTab === 'spare_parts' && <SparePartsForm sparePartId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'loans' && <LoanForm onSaved={handleSaved} />}
-                {activeTab === 'repairs' && <RepairForm onSaved={handleSaved} />}
+                {activeTab === 'loans' && <LoanForm onSaved={handleSaved} presetAssetId={presetAssetId} />}
+                {activeTab === 'repairs' && <RepairForm onSaved={handleSaved} presetAssetId={presetAssetId} />}
               </div>
             </div>
           ) : (

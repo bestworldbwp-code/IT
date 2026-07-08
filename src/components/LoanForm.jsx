@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 
-export default function LoanForm({ onSaved }) {
+export default function LoanForm({ onSaved, presetAssetId }) {
     const [loading, setLoading] = useState(false)
     const [assets, setAssets] = useState([])
     const [employees, setEmployees] = useState([])
     const [formData, setFormData] = useState({
-        asset_id: '',
+        asset_id: presetAssetId ? String(presetAssetId) : '',
         employee_id: '',
         due_date: '',
         remarks: ''
