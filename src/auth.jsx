@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 
 // ล็อกหน้าแอดมินด้วยรหัสผ่านชุดเดียว (ใช้คนเดียว)
 // เก็บเป็น SHA-256 ใน .env.local (VITE_ADMIN_PASSWORD_HASH) ไม่เก็บรหัสตรง ๆ ในโค้ด
-// เปลี่ยนรหัส: npm run password -- รหัสใหม่  แล้วเอาค่าที่ได้ไปใส่ .env.local
-const HASH = import.meta.env.VITE_ADMIN_PASSWORD_HASH || ''
+// เปลี่ยน PIN: npm run password -- PINใหม่  แล้วเอาค่าที่ได้ไปใส่ .env.local หรือ Vercel
+// ค่าเริ่มต้น = PIN 1234 (ใช้เมื่อไม่ได้ตั้ง VITE_ADMIN_PASSWORD_HASH) — เปลี่ยน PIN: npm run password -- PINใหม่
+const DEFAULT_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'
+const HASH = import.meta.env.VITE_ADMIN_PASSWORD_HASH || DEFAULT_PIN_HASH
 const KEY = 'it_admin_ok'
 
 // crypto.subtle มีเฉพาะหน้าเว็บที่เป็น HTTPS หรือ localhost — ถ้าเปิดผ่าน http://IP-ในบริษัท จะไม่มี
@@ -77,7 +79,7 @@ export function LoginScreen({ onLogin }) {
     let good = false
     try { good = await onLogin(pw) } catch (ex) { setErr('ตรวจสอบรหัสผ่านไม่ได้: ' + ex.message) }
     setBusy(false)
-    if (!good) { setErr(m => m || 'รหัสผ่านไม่ถูกต้อง'); setPw('') }
+    if (!good) { setErr(m => m || 'PIN ไม่ถูกต้อง'); setPw('') }
   }
 
   return (
@@ -86,8 +88,9 @@ export function LoginScreen({ onLogin }) {
         <div className="brand-logo" style={{ margin: '0 auto 12px', width: 52, height: 52, fontSize: '1.5rem' }}>🖥️</div>
         <h2 style={{ marginBottom: 4 }}>IT Asset</h2>
         <div className="muted" style={{ marginBottom: 24 }}>เบสท์เวิลด์ อินเตอร์พลาส · สำหรับเจ้าหน้าที่ IT</div>
-        {!HASH && <div style={{ background: '#fef2f2', color: '#991b1b', padding: 10, borderRadius: 8, marginBottom: 12, fontSize: '0.85rem' }}>ยังไม่ได้ตั้งรหัสผ่าน — ต้องใส่ค่า VITE_ADMIN_PASSWORD_HASH ใน .env.local (หรือใน Environment Variables ของเว็บโฮสต์) แล้ว build ใหม่</div>}
-        <input id="admin-pw" type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="รหัสผ่าน" autoComplete="current-password" style={{ marginBottom: 12, textAlign: 'center', fontSize: '1.1rem' }} />
+        <input id="admin-pw" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={8} value={pw}
+          onChange={e => setPw(e.target.value.replace(/\D/g, ''))} placeholder="ใส่ PIN" autoComplete="current-password"
+          style={{ marginBottom: 12, textAlign: 'center', fontSize: '1.8rem', letterSpacing: '0.5em' }} />
         {err && <div style={{ color: 'var(--danger)', marginBottom: 12, fontSize: '0.9rem' }}>{err}</div>}
         <button className="primary" type="submit" disabled={busy || !pw} style={{ width: '100%' }}>{busy ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</button>
         <div className="muted" style={{ marginTop: 16, fontSize: '0.8rem' }}>พนักงานทั่วไปสแกน QR บนเครื่องเพื่อแจ้งซ่อมได้โดยไม่ต้องเข้าสู่ระบบ</div>
