@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Dashboard from './components/Dashboard.jsx'
 import AssetForm from './components/AssetForm.jsx'
 import AssetList from './components/AssetList.jsx'
@@ -19,16 +19,105 @@ import LoanForm from './components/LoanForm.jsx'
 import RepairList from './components/RepairList.jsx'
 import RepairForm from './components/RepairForm.jsx'
 import ScanFlow from './components/ScanFlow.jsx'
-import { isEnvReady, logAction, getSupabase } from './supabaseClient.js'
-import { useEffect } from 'react'
+import ProceduresPage from './audit/ProceduresPage.jsx'
+import RegisterPage from './audit/RegisterPage.jsx'
+import HistoryPage from './audit/HistoryPage.jsx'
+import RepairFormPage from './audit/RepairFormPage.jsx'
+import BackupPage from './audit/BackupPage.jsx'
+import QrLabelsPage from './audit/QrLabelsPage.jsx'
+import SurveyPage from './audit/SurveyPage.jsx'
+import { isEnvReady, getSupabase } from './supabaseClient.js'
+import { useAdminAuth, LoginScreen } from './auth.jsx'
+
+// ตั้งค่าแต่ละหน้าไว้ที่เดียว: หัวข้อ, คำอธิบาย, ปุ่มเพิ่ม, รายการ, ฟอร์ม
+const PAGES = {
+  home: { label: 'หน้าหลัก', icon: '🏠', title: 'ภาพรวมระบบ', desc: 'สรุปสถานะทรัพย์สินและงานที่ต้องจัดการวันนี้' },
+  repairs: {
+    label: 'แจ้งซ่อม', icon: '🛎️', title: 'แจ้งซ่อมคอมพิวเตอร์และอุปกรณ์ IT', desc: 'QP-IT-01 ข้อ 5.2 — รับเรื่อง ซ่อม ปิดงาน แล้วลงประวัติเครื่องอัตโนมัติ (FQP-IT-01:03)',
+    addLabel: 'แจ้งซ่อมใหม่', adminOnlyAdd: false,
+    List: (p) => <RepairList onNewRepair={p.onAdd} readOnly={p.readOnly} />,
+    Form: (p) => <RepairForm onSaved={p.onSaved} presetAssetId={p.presetAssetId} />,
+  },
+  loans: {
+    label: 'ยืม-คืน', icon: '🔄', title: 'ยืม-คืนเครื่องและอุปกรณ์ IT', desc: 'ติดตามการยืม-คืนเครื่องและโน้ตบุ๊ก',
+    addLabel: 'บันทึกการยืม',
+    List: (p) => <LoanList onNewLoan={p.onAdd} readOnly={p.readOnly} />,
+    Form: (p) => <LoanForm onSaved={p.onSaved} presetAssetId={p.presetAssetId} />,
+  },
+  maintenance: {
+    label: 'ประวัติบำรุงรักษา', icon: '🔧', title: 'บันทึกการซ่อม/บำรุงรักษา', desc: 'QP-IT-01 ข้อ 5.3 — รายการที่ลงในประวัติเครื่อง (FQP-IT-01:02)',
+    addLabel: 'บันทึกการซ่อม/บำรุงรักษา',
+    List: (p) => <MaintenanceList onEdit={p.onEdit} readOnly={p.readOnly} />,
+    Form: (p) => <MaintenanceForm maintenanceId={p.id} onSaved={p.onSaved} />,
+  },
+  assets: {
+    label: 'เครื่องและอุปกรณ์ IT', icon: '📦', title: 'เครื่องคอมพิวเตอร์และอุปกรณ์ IT', desc: 'ทะเบียนหลักตาม QP-IT-01 ข้อ 5.1 — ทุกเครื่องมีรหัส AAA-BB-CC และป้ายชี้บ่ง',
+    addLabel: 'ขึ้นทะเบียนเครื่องใหม่',
+    List: (p) => <AssetList onEdit={p.onEdit} readOnly={p.readOnly} />,
+    Form: (p) => <AssetForm assetId={p.id} onSaved={p.onSaved} />,
+  },
+  computers: {
+    label: 'คอมพิวเตอร์', icon: '💻', title: 'คอมพิวเตอร์ (ข้อมูลเดิม)', desc: 'ทะเบียนคอมพิวเตอร์ชุดเดิม — สเปก ผู้ใช้ และประวัติซ่อมแบบข้อความ',
+    addLabel: 'เพิ่มเครื่อง',
+    List: (p) => <ComputerList onEdit={p.onEdit} readOnly={p.readOnly} />,
+    Form: (p) => <ComputerForm computerId={p.id} onSaved={p.onSaved} />,
+  },
+  printers: {
+    label: 'เครื่องพิมพ์', icon: '🖨️', title: 'เครื่องพิมพ์ (ข้อมูลเดิม)', desc: 'ทะเบียนเครื่องพิมพ์ชุดเดิม',
+    addLabel: 'เพิ่มเครื่องพิมพ์',
+    List: (p) => <PrinterList onEdit={p.onEdit} readOnly={p.readOnly} />,
+    Form: (p) => <PrinterForm printerId={p.id} onSaved={p.onSaved} />,
+  },
+  spare_parts: {
+    label: 'คลังอะไหล่', icon: '🧰', title: 'คลังอะไหล่', desc: 'สต๊อกอุปกรณ์ต่อพ่วงและวัสดุสิ้นเปลือง',
+    addLabel: 'เพิ่มรายการ',
+    List: (p) => <SparePartsList onEdit={p.onEdit} readOnly={p.readOnly} />,
+    Form: (p) => <SparePartsForm sparePartId={p.id} onSaved={p.onSaved} />,
+  },
+  employees: {
+    label: 'พนักงาน', icon: '👥', title: 'ทะเบียนพนักงาน', desc: 'ใช้อ้างอิงผู้ใช้งานเครื่องและผู้แจ้งซ่อม',
+    addLabel: 'เพิ่มพนักงาน',
+    List: (p) => <EmployeeList onEdit={p.onEdit} readOnly={p.readOnly} />,
+    Form: (p) => <EmployeeForm employeeId={p.id} onSaved={p.onSaved} />,
+  },
+  software: {
+    label: 'ซอฟต์แวร์/ลิขสิทธิ์', icon: '💿', title: 'ซอฟต์แวร์และลิขสิทธิ์', desc: 'ควบคุมไลเซนส์และวันหมดอายุ',
+    addLabel: 'เพิ่มลิขสิทธิ์',
+    List: (p) => <SoftwareList onEdit={p.onEdit} readOnly={p.readOnly} />,
+    Form: (p) => <SoftwareForm softwareId={p.id} onSaved={p.onSaved} />,
+  },
+  // ---- เอกสารสำหรับออดิท (สร้างจากข้อมูลเดิม พิมพ์ได้) ----
+  procedures: { label: 'ระเบียบปฏิบัติงาน IT', icon: '📘', title: 'ระเบียบปฏิบัติงานแผนก IT', desc: 'QP-IT-01 ระเบียบปฏิบัติงานแผนก IT ฉบับ 16 ต.ค. 2566', List: () => <ProceduresPage /> },
+  register: { label: 'ทะเบียนเครื่อง', icon: '📋', title: 'ทะเบียนรายชื่อเครื่องคอมพิวเตอร์และอุปกรณ์ IT', desc: 'FQP-IT-01:01 แยกตาราง Computer / Printer ตามแบบฟอร์มเดิม', List: () => <RegisterPage /> },
+  history: { label: 'ประวัติเครื่อง', icon: '🗂️', title: 'ประวัติเครื่องคอมพิวเตอร์และอุปกรณ์ IT', desc: 'FQP-IT-01:02 บันทึกการซ่อม/บำรุงรักษารายเครื่อง', List: () => <HistoryPage /> },
+  repair_form: { label: 'ใบแจ้งซ่อม', icon: '📝', title: 'ใบแจ้งซ่อมคอมพิวเตอร์และอุปกรณ์ IT', desc: 'FQP-IT-01:03 พิมพ์จากรายการแจ้งซ่อมในระบบ หรือฟอร์มเปล่า', List: () => <RepairFormPage /> },
+  survey: { label: 'สำรวจเครื่อง', icon: '📋', title: 'สำรวจเครื่องคอมพิวเตอร์และอุปกรณ์', desc: 'เดินตรวจว่าเครื่องอยู่กับใคร ที่ไหน แล้วอัปเดตทะเบียน FQP-IT-01:01 ทันที', List: () => <SurveyPage /> },
+  qr_labels: { label: 'ป้าย QR ติดเครื่อง', icon: '🏷️', title: 'พิมพ์ป้าย QR ติดเครื่อง', desc: 'แบบฟอร์มสติกเกอร์ชี้บ่งเครื่อง (ข้อ 5.1) พร้อม QR สแกนแจ้งซ่อม', List: () => <QrLabelsPage /> },
+  backup: { label: 'สำรองข้อมูล', icon: '💾', title: 'สำรองข้อมูล (Backup)', desc: 'ดาวน์โหลดไฟล์สำรองข้อมูลระบบ และบันทึกว่าสำรองเมื่อไหร่', List: () => <BackupPage /> },
+}
+
+const NAV_GROUPS = [
+  { title: null, items: ['home'] },
+  { title: 'งานบริการ', items: ['repairs', 'loans', 'maintenance', 'survey'] },
+  { title: 'ทรัพย์สิน', items: ['assets', 'computers', 'printers', 'spare_parts', 'qr_labels'] },
+  { title: 'ข้อมูลอ้างอิง', items: ['employees', 'software'] },
+  { title: 'เอกสารออดิท (QP-IT-01)', items: ['procedures', 'register', 'history', 'repair_form'] },
+  { title: 'เครื่องมือ', items: ['backup'] },
+]
+
+const tabFromHash = () => {
+  const h = window.location.hash.replace('#', '')
+  return PAGES[h] ? h : 'home'
+}
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('home')
+  const [activeTab, setActiveTab] = useState(tabFromHash)
   const [editingId, setEditingId] = useState(null)
   const [isAdding, setIsAdding] = useState(false)
-  const [role, setRole] = useState('admin') // Simple role: admin, viewer
+  const auth = useAdminAuth()
   const [pendingRepairs, setPendingRepairs] = useState(0)
-  const [presetAssetId, setPresetAssetId] = useState(null)
+  const [listKey, setListKey] = useState(0)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [scanTag, setScanTag] = useState(() => new URLSearchParams(window.location.search).get('asset'))
 
   const clearScanUrl = () => {
@@ -46,9 +135,46 @@ export default function App() {
     setPendingRepairs(count || 0)
   }
 
+  useEffect(() => { loadPendingRepairs() }, [activeTab, isAdding])
+
+  // ปุ่ม Back/Forward ของเบราว์เซอร์ใช้เปลี่ยนหน้าได้
+  // เทียบกับหน้าปัจจุบันก่อน — ไม่งั้น hashchange ที่เกิดจาก navigate() เองจะไปปิดฟอร์มที่เพิ่งเปิด
+  // (ปุ่ม "ทำรายการด่วน" ในหน้าหลักเคยเปิดฟอร์มไม่ขึ้นเพราะเหตุนี้)
+  const tabRef = useRef(activeTab)
   useEffect(() => {
-    loadPendingRepairs()
-  }, [activeTab, isAdding])
+    const onHash = () => {
+      const t = tabFromHash()
+      if (t === tabRef.current) return
+      tabRef.current = t
+      setActiveTab(t)
+      closeForm()
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  // Esc ปิดฟอร์ม
+  useEffect(() => {
+    if (!isAdding) return
+    const onKey = (e) => { if (e.key === 'Escape') closeForm() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isAdding])
+
+  function navigate(tab, openAdd = false) {
+    tabRef.current = tab
+    if (window.location.hash !== '#' + tab) window.location.hash = tab
+    setActiveTab(tab)
+    setEditingId(null)
+    setIsAdding(openAdd)
+    setMenuOpen(false)
+    window.scrollTo(0, 0)
+  }
+
+  function closeForm() {
+    setIsAdding(false)
+    setEditingId(null)
+  }
 
   const handleEdit = (id) => {
     setEditingId(id)
@@ -56,9 +182,8 @@ export default function App() {
   }
 
   const handleSaved = () => {
-    setIsAdding(false)
-    setEditingId(null)
-    setPresetAssetId(null)
+    closeForm()
+    setListKey(k => k + 1) // โหลดรายการใหม่หลังบันทึก
   }
 
   // สแกน QR เข้ามา (?asset=ASSET_TAG) -> โหมดมือถือเฉพาะกิจ ไม่เข้าหน้าแอดมิน
@@ -66,283 +191,96 @@ export default function App() {
     return <ScanFlow assetTag={scanTag} onClose={clearScanUrl} />
   }
 
-  const navGroups = [
-    {
-      title: null,
-      items: [
-        { id: 'home', label: 'หน้าหลัก', icon: '📊' },
-      ]
-    },
-    {
-      title: 'งานบริการ',
-      items: [
-        { id: 'repairs', label: 'แจ้งซ่อม', icon: '🛎️', badge: pendingRepairs },
-        { id: 'loans', label: 'ยืม-คืน', icon: '🔄' },
-        { id: 'maintenance', label: 'ประวัติบำรุงรักษา', icon: '🔧' },
-      ]
-    },
-    {
-      title: 'ทรัพย์สิน',
-      items: [
-        { id: 'assets', label: 'ทรัพย์สิน IT', icon: '📦' },
-        { id: 'computers', label: 'คอมพิวเตอร์', icon: '💻' },
-        { id: 'printers', label: 'เครื่องพิมพ์', icon: '🖨️' },
-        { id: 'spare_parts', label: 'คลังอะไหล่', icon: '🛠️' },
-      ]
-    },
-    {
-      title: 'ข้อมูลอ้างอิง',
-      items: [
-        { id: 'employees', label: 'ทะเบียนพนักงาน', icon: '👥' },
-        { id: 'software', label: 'ซอฟต์แวร์/ลิขสิทธิ์', icon: '💿' },
-      ]
-    },
-  ]
+  // หน้าแอดมินต้องใส่รหัสผ่านก่อน (ใช้คนเดียว) — หน้าสแกน QR ด้านบนไม่ต้อง
+  if (!auth.ok) {
+    return <LoginScreen onLogin={auth.login} />
+  }
+
+  const page = PAGES[activeTab]
+  const readOnly = false
+  const canAdd = !!page.Form
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <nav style={{
-        width: 280,
-        background: '#0f172a',
-        color: 'white',
-        padding: '24px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 4,
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
-        boxShadow: '4px 0 10px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ marginBottom: 32, padding: '0 8px' }}>
-          <h2 style={{ color: 'white', fontSize: '1.25rem', marginBottom: 4 }}>IT Asset ISO</h2>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Corporate Asset Management</div>
+    <div className="app">
+      {menuOpen && <div className="overlay" style={{ zIndex: 35 }} onClick={() => setMenuOpen(false)} />}
+
+      <nav className={`sidebar ${menuOpen ? 'open' : ''}`}>
+        <div className="brand">
+          <div className="brand-logo">🖥️</div>
+          <div>
+            <div className="brand-name">IT Asset</div>
+            <div className="brand-sub">เบสท์เวิลด์ อินเตอร์พลาส</div>
+          </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {navGroups.map((group, gi) => (
-            <div key={gi} style={{ marginBottom: 12 }}>
-              {group.title && (
-                <div style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  color: '#64748b',
-                  textTransform: 'uppercase',
-                  padding: '8px 16px 4px'
-                }}>
-                  {group.title}
-                </div>
-              )}
-              {group.items.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => { setActiveTab(item.id); setIsAdding(false); setEditingId(null); }}
-                  style={{
-                    width: '100%',
-                    background: activeTab === item.id ? 'var(--primary)' : 'transparent',
-                    color: activeTab === item.id ? 'white' : '#cbd5e1',
-                    border: 'none',
-                    textAlign: 'left',
-                    padding: '10px 16px',
-                    borderRadius: 8,
-                    fontSize: '0.9rem',
-                    fontWeight: activeTab === item.id ? 600 : 400,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <span>{item.icon}</span>
-                  <span style={{ flex: 1 }}>{item.label}</span>
-                  {item.badge > 0 && (
-                    <span style={{
-                      background: '#dc2626',
-                      color: 'white',
-                      borderRadius: 999,
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      minWidth: 20,
-                      height: 20,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 6px'
-                    }}>
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
+        <div className="nav">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi}>
+              {group.title && <div className="nav-group-title">{group.title}</div>}
+              {group.items.map(id => {
+                const p = PAGES[id]
+                const badge = id === 'repairs' ? pendingRepairs : 0
+                return (
+                  <button key={id} className={`nav-item ${activeTab === id ? 'active' : ''}`} onClick={() => navigate(id)}>
+                    <span className="icon">{p.icon}</span>
+                    <span>{p.label}</span>
+                    {badge > 0 && <span className="nav-badge">{badge}</span>}
+                  </button>
+                )
+              })}
             </div>
           ))}
         </div>
 
-        <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
-          <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: 8 }}>SESSION ROLE</label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            style={{
-              width: '100%',
-              background: 'rgba(255,255,255,0.05)',
-              color: 'white',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: 4,
-              padding: '4px 8px'
-            }}
-          >
-            <option value="admin">Administrator (Modify)</option>
-            <option value="viewer">Viewer (Read-only)</option>
-          </select>
-        </div>
-
-        {!isEnvReady() && (
-          <div style={{ marginTop: 16, background: '#450a0a', border: '1px solid #7f1d1d', padding: 12, borderRadius: 8, fontSize: '0.75rem' }}>
-            Environment variables not set.
-          </div>
-        )}
-      </nav>
-
-      {/* Main Content */}
-      <main style={{ flex: 1, padding: '40px 60px', overflowY: 'auto', background: '#f8fafc' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          {isAdding ? (
-            <div>
-              <button
-                className="btn-back"
-                onClick={() => { setIsAdding(false); setEditingId(null); setPresetAssetId(null); }}
-                style={{ marginBottom: 24, border: 'none', background: 'none', color: '#64748b' }}
-              >
-                ← กลับไปหน้ารายการ
-              </button>
-              <div className="card">
-                {activeTab === 'assets' && <AssetForm assetId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'computers' && <ComputerForm computerId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'employees' && <EmployeeForm employeeId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'printers' && <PrinterForm printerId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'software' && <SoftwareForm softwareId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'maintenance' && <MaintenanceForm maintenanceId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'spare_parts' && <SparePartsForm sparePartId={editingId} onSaved={handleSaved} />}
-                {activeTab === 'loans' && <LoanForm onSaved={handleSaved} presetAssetId={presetAssetId} />}
-                {activeTab === 'repairs' && <RepairForm onSaved={handleSaved} presetAssetId={presetAssetId} />}
-              </div>
-            </div>
-          ) : (
-            <div>
-              {activeTab === 'home' && <Dashboard />}
-              {activeTab === 'assets' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>ทรัพย์สิน IT</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>จัดการฮาร์ดแวร์และอุปกรณ์ทั้งหมดในบริษัท (ISO 27001 Assets)</p>
-                    </div>
-                    {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ เพิ่มทรัพย์สินใหม่</button>}
-                  </div>
-                  <AssetList onEdit={handleEdit} readOnly={role === 'viewer'} />
-                </>
-              )}
-              {activeTab === 'computers' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>คอมพิวเตอร์</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>ทะเบียนเครื่องคอมพิวเตอร์และโน้ตบุ๊กแยกหมวดหมู่</p>
-                    </div>
-                    {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ เพิ่มเครื่องใหม่</button>}
-                  </div>
-                  <ComputerList onEdit={handleEdit} readOnly={role === 'viewer'} />
-                </>
-              )}
-              {activeTab === 'employees' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>ทะเบียนพนักงาน</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>ข้อมูลพนักงานเพื่ออ้างอิงสิทธิ์การเข้าถึงและการครอบครอง</p>
-                    </div>
-                    {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ เพิ่มพนักงานใหม่</button>}
-                  </div>
-                  <EmployeeList onEdit={handleEdit} readOnly={role === 'viewer'} />
-                </>
-              )}
-              {activeTab === 'printers' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>เครื่องพิมพ์</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>ทรัพยากรเครื่องพิมพ์และการแชร์ใช้งาน</p>
-                    </div>
-                    {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ เพิ่มเครื่องพิมพ์ใหม่</button>}
-                  </div>
-                  <PrinterList onEdit={handleEdit} readOnly={role === 'viewer'} />
-                </>
-              )}
-              {activeTab === 'software' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>ซอฟต์แวร์และลิขสิทธิ์</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>ควบคุมซอฟต์แวร์ลิขสิทธิ์ (ISO A.18.2 Compliance)</p>
-                    </div>
-                    {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ เพิ่มลิขสิทธิ์ใหม่</button>}
-                  </div>
-                  <SoftwareList onEdit={handleEdit} readOnly={role === 'viewer'} />
-                </>
-              )}
-              {activeTab === 'maintenance' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>ประวัติบำรุงรักษา</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>บันทึกการซ่อมแซมและการตรวจเช็คตามรอบ (ISO Continuity)</p>
-                    </div>
-                    {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ บันทึกงานซ่อม/บำรุง</button>}
-                  </div>
-                  <MaintenanceList onEdit={handleEdit} readOnly={role === 'viewer'} />
-                </>
-              )}
-              {activeTab === 'spare_parts' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>คลังอะไหล่ (Spare Parts)</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>สต๊อกอุปกรณ์ต่อพ่วงและวัสดุสิ้นเปลือง (ISO Stock Control)</p>
-                    </div>
-                    {role === 'admin' && <button className="primary" onClick={() => setIsAdding(true)}>+ เพิ่มรายการใหม่</button>}
-                  </div>
-                  <SparePartsList onEdit={handleEdit} readOnly={role === 'viewer'} />
-                </>
-              )}
-              {activeTab === 'loans' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>ระบบยืม-คืน (Loan System)</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>ติดตามการยืม-คืนอุปกรณ์และโน้ตบุ๊ก</p>
-                    </div>
-                  </div>
-                  <LoanList onNewLoan={() => setIsAdding(true)} readOnly={role === 'viewer'} />
-                </>
-              )}
-              {activeTab === 'repairs' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.875rem' }}>ระบบแจ้งซ่อม (Repair Request)</h1>
-                      <p style={{ margin: '4px 0 0', color: '#64748b' }}>รับแจ้งซ่อม ติดตามสถานะ และปิดงานพร้อมบันทึกประวัติบำรุงรักษาอัตโนมัติ</p>
-                    </div>
-                  </div>
-                  <RepairList onNewRepair={() => setIsAdding(true)} readOnly={role === 'viewer'} />
-                </>
-              )}
+        <div className="sidebar-footer">
+          <button className="nav-item" onClick={() => { if (confirm('ออกจากระบบ?')) auth.logout() }}>
+            <span className="icon">🔒</span><span>ออกจากระบบ</span>
+          </button>
+          {!isEnvReady() && (
+            <div style={{ marginTop: 12, background: '#450a0a', border: '1px solid #7f1d1d', padding: 10, borderRadius: 8, fontSize: '0.75rem' }}>
+              ยังไม่ได้ตั้งค่าการเชื่อมต่อฐานข้อมูล
             </div>
           )}
         </div>
-      </main>
+      </nav>
+
+      <div className="main">
+        <header className="topbar">
+          <button className="ghost menu-btn" onClick={() => setMenuOpen(true)} aria-label="เปิดเมนู">☰</button>
+          <div>
+            <h1>{page.title}</h1>
+            <p>{page.desc}</p>
+          </div>
+          <div className="actions">
+            {canAdd && (
+              <button className="primary" onClick={() => { setEditingId(null); setIsAdding(true) }}>
+                + {page.addLabel}
+              </button>
+            )}
+          </div>
+        </header>
+
+        <main className="content">
+          {activeTab === 'home'
+            ? <Dashboard onNavigate={navigate} />
+            : <page.List key={listKey} onEdit={handleEdit} onAdd={() => setIsAdding(true)} readOnly={readOnly} />}
+        </main>
+      </div>
+
+      {isAdding && page.Form && (
+        <>
+          <div className="overlay" onClick={closeForm} />
+          <aside className="drawer" role="dialog" aria-modal="true">
+            <div className="drawer-head">
+              <span className="hint">กด Esc เพื่อปิด</span>
+              <button className="ghost" onClick={closeForm} aria-label="ปิด">✕</button>
+            </div>
+            <div className="drawer-body">
+              <page.Form id={editingId} onSaved={handleSaved} />
+            </div>
+          </aside>
+        </>
+      )}
     </div>
   )
 }

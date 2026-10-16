@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
+import { textMatch, exportCSV, today } from '../audit/docs.jsx'
+
+const CATEGORY_TH = { Peripheral: 'อุปกรณ์ต่อพ่วง', Consumable: 'วัสดุสิ้นเปลือง', Component: 'ชิ้นส่วนภายใน', Network: 'อุปกรณ์เครือข่าย' }
 
 export default function SparePartsList({ onEdit, readOnly }) {
     const [items, setItems] = useState([])
@@ -10,27 +13,22 @@ export default function SparePartsList({ onEdit, readOnly }) {
         const client = getSupabase()
         if (!client) return
         setLoading(true)
-        let query = client.from('spare_parts').select('*').order('name', { ascending: true })
-        if (search) {
-            query = query.or(`name.ilike.%${search}%,category.ilike.%${search}%,location.ilike.%${search}%`)
-        }
-        const { data, error } = await query
+        const { data, error } = await client.from('spare_parts').select('*').order('name', { ascending: true })
         setLoading(false)
-        if (!error) setItems(data || [])
+        if (error) alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message)
+        else setItems(data || [])
     }
+    useEffect(() => { load() }, [])
 
-    useEffect(() => {
-        const timer = setTimeout(load, 300)
-        return () => clearTimeout(timer)
-    }, [search])
-
+    // ปรับจำนวนทันทีบนหน้าจอแล้วค่อยบันทึก (กด +/- รัว ๆ จะไม่นับหาย)
     async function updateStock(id, delta) {
         if (readOnly) return
-        const client = getSupabase()
         const item = items.find(i => i.id === id)
+        if (!item) return
         const newQty = Math.max(0, (item.stock_quantity || 0) + delta)
-        const { error } = await client.from('spare_parts').update({ stock_quantity: newQty }).eq('id', id)
-        if (!error) load()
+        setItems(list => list.map(i => i.id === id ? { ...i, stock_quantity: newQty } : i))
+        const { error } = await getSupabase().from('spare_parts').update({ stock_quantity: newQty }).eq('id', id)
+        if (error) { alert(error.message); load() }
     }
 
     async function deleteItem(id) {
@@ -41,17 +39,13 @@ export default function SparePartsList({ onEdit, readOnly }) {
         else load()
     }
 
-    const exportToCSV = () => {
-        if (!items.length) return
-        const headers = ['Name', 'Category', 'Stock', 'Min Stock', 'Location', 'Remarks']
-        const csvData = items.map(it => [
-            it.name, it.category, it.stock_quantity, it.min_stock_level, it.location, it.remarks
-        ].map(v => `"${v || ''}"`).join(','))
-        const blob = new Blob([headers.join(',') + '\n' + csvData.join('\n')], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = `it_spare_parts_${new Date().toISOString().split('T')[0]}.csv`
-        link.click()
+    const visible = items.filter(it => textMatch(search, it.name, it.category, CATEGORY_TH[it.category], it.location, it.remarks))
+    const low = (it) => it.min_stock_level != null && (it.stock_quantity ?? 0) <= it.min_stock_level
+
+    const doExport = () => {
+        if (!visible.length) return
+        exportCSV(`it_spare_parts_${today()}.csv`, ['ชื่อ', 'หมวดหมู่', 'คงเหลือ', 'จุดสั่งซื้อ', 'สถานที่จัดเก็บ', 'หมายเหตุ'],
+            visible.map(it => [it.name, CATEGORY_TH[it.category] || it.category, it.stock_quantity, it.min_stock_level, it.location, it.remarks]))
     }
 
     return (
@@ -63,7 +57,7 @@ export default function SparePartsList({ onEdit, readOnly }) {
                     style={{ flex: 1 }}
                     onChange={(e) => setSearch(e.target.value)}
                 />
-                <button className="secondary" onClick={exportToCSV}>📥 Export CSV</button>
+                <button className="secondary" onClick={doExport} disabled={!visible.length}>📥 Export CSV</button>
             </div>
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -77,28 +71,20 @@ export default function SparePartsList({ onEdit, readOnly }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {items.map((it) => (
+                        {visible.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ padding: '10px 16px' }}>
                                     <div style={{ fontWeight: 600 }}>{it.name}</div>
-                                    <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.category}</div>
+                                    <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{CATEGORY_TH[it.category] || it.category}</div>
                                 </td>
                                 <td style={{ padding: '10px 16px' }}>{it.location || '-'}</td>
                                 <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
                                         {!readOnly && <button className="secondary" style={{ padding: '4px 8px' }} onClick={() => updateStock(it.id, -1)}>-</button>}
-                                        <span style={{
-                                            fontWeight: 700,
-                                            color: it.stock_quantity <= it.min_stock_level ? 'crimson' : 'inherit',
-                                            minWidth: 30
-                                        }}>
-                                            {it.stock_quantity}
-                                        </span>
+                                        <span style={{ fontWeight: 700, color: low(it) ? 'crimson' : 'inherit', minWidth: 30 }}>{it.stock_quantity ?? 0}</span>
                                         {!readOnly && <button className="secondary" style={{ padding: '4px 8px' }} onClick={() => updateStock(it.id, 1)}>+</button>}
                                     </div>
-                                    {it.stock_quantity <= it.min_stock_level && (
-                                        <div style={{ fontSize: '0.7rem', color: 'crimson', marginTop: 4 }}>ควรสั่งเพิ่ม! (Min: {it.min_stock_level})</div>
-                                    )}
+                                    {low(it) && <div style={{ fontSize: '0.7rem', color: 'crimson', marginTop: 4 }}>ควรสั่งเพิ่ม! (Min: {it.min_stock_level})</div>}
                                 </td>
                                 <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                     {!readOnly && (
@@ -110,8 +96,8 @@ export default function SparePartsList({ onEdit, readOnly }) {
                                 </td>
                             </tr>
                         ))}
-                        {!items.length && !loading && (
-                            <tr><td colSpan="4" style={{ padding: 40, textAlign: 'center' }}>ไม่พบข้อมูลอะไหล่</td></tr>
+                        {!visible.length && !loading && (
+                            <tr><td colSpan="4" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>ไม่พบข้อมูลอะไหล่</td></tr>
                         )}
                     </tbody>
                 </table>

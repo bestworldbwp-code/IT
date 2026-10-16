@@ -27,7 +27,8 @@ export default function SoftwareForm({ softwareId, onSaved }) {
             setFetching(true)
             const { data: soft, error } = await client.from('software').select('*').eq('id', softwareId).single()
             setFetching(false)
-            if (!error) setData(soft)
+            if (error) alert(error.message)
+            else setData(soft)
         }
         load()
     }, [softwareId])
@@ -36,7 +37,7 @@ export default function SoftwareForm({ softwareId, onSaved }) {
         e.preventDefault()
         const client = getSupabase()
         setLoading(true)
-        const payload = { ...data }
+        const payload = { ...data, total_licenses: parseInt(data.total_licenses, 10) || 0, expiry_date: data.expiry_date || null }
         delete payload.id
         delete payload.created_at
 
@@ -59,35 +60,35 @@ export default function SoftwareForm({ softwareId, onSaved }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
                     <label>ชื่อซอฟต์แวร์ *</label>
-                    <input required value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} placeholder="เช่น Adobe Creative Cloud" />
+                    <input required value={data.name ?? ''} onChange={(e) => setData({ ...data, name: e.target.value })} placeholder="เช่น Adobe Creative Cloud" />
                 </div>
                 <div>
                     <label>ผู้ผลิต/Vendor</label>
-                    <input value={data.vendor} onChange={(e) => setData({ ...data, vendor: e.target.value })} placeholder="เช่น Adobe Inc." />
+                    <input value={data.vendor ?? ''} onChange={(e) => setData({ ...data, vendor: e.target.value })} placeholder="เช่น Adobe Inc." />
                 </div>
                 <div>
                     <label>เวอร์ชัน</label>
-                    <input value={data.version} onChange={(e) => setData({ ...data, version: e.target.value })} />
+                    <input value={data.version ?? ''} onChange={(e) => setData({ ...data, version: e.target.value })} />
                 </div>
                 <div>
                     <label>ประเภทลิขสิทธิ์</label>
-                    <select value={data.license_type} onChange={(e) => setData({ ...data, license_type: e.target.value })}>
+                    <select value={data.license_type ?? ''} onChange={(e) => setData({ ...data, license_type: e.target.value })}>
                         <option value="subscription">Subscription (เช่ารายปี)</option>
                         <option value="perpetual">Perpetual (ซื้อขาด)</option>
                         <option value="open_source">Open Source / Free</option>
                     </select>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
                     <label>License Key</label>
-                    <input value={data.license_key} onChange={(e) => setData({ ...data, license_key: e.target.value })} />
+                    <input value={data.license_key ?? ''} onChange={(e) => setData({ ...data, license_key: e.target.value })} />
                 </div>
                 <div>
                     <label>จำนวนสิทธิ์ (Licenses)</label>
-                    <input type="number" value={data.total_licenses} onChange={(e) => setData({ ...data, total_licenses: parseInt(e.target.value) })} />
+                    <input type="number" value={data.total_licenses ?? ''} min="0" onChange={(e) => setData({ ...data, total_licenses: e.target.value })} />
                 </div>
                 <div>
                     <label>ถือกรรมสิทธิ์โดย ( Assigned To)</label>
-                    <input value={data.assigned_to} onChange={(e) => setData({ ...data, assigned_to: e.target.value })} placeholder="ชื่อพนักงานหรือรหัส" />
+                    <input value={data.assigned_to ?? ''} onChange={(e) => setData({ ...data, assigned_to: e.target.value })} placeholder="ชื่อพนักงานหรือรหัส" />
                 </div>
                 <div>
                     <label>วันหมดอายุสัญญา/ลิขสิทธิ์</label>

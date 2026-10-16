@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
+import { isLeaver } from '../audit/docs.jsx'
 
 export default function LoanForm({ onSaved, presetAssetId, stacked }) {
     const [loading, setLoading] = useState(false)
@@ -15,6 +16,7 @@ export default function LoanForm({ onSaved, presetAssetId, stacked }) {
     useEffect(() => {
         async function loadOptions() {
             const client = getSupabase()
+            if (!client) return
 
             // Load available assets (e.g. status in_use/stock and not currently in active loan)
             // For simplicity, we just load all assets and maybe filter later or just rely on manual check
@@ -29,7 +31,7 @@ export default function LoanForm({ onSaved, presetAssetId, stacked }) {
                 .order('name')
 
             setAssets(assetData || [])
-            setEmployees(empData || [])
+            setEmployees((empData || []).filter(e => !isLeaver(e.name) && e.employee_id !== '0000'))
         }
         loadOptions()
     }, [])
@@ -61,7 +63,7 @@ export default function LoanForm({ onSaved, presetAssetId, stacked }) {
         <form onSubmit={handleSubmit}>
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '1fr 1fr', gap: 24, marginBottom: 24 }}>
                 <div className="form-group">
-                    <label>เลือกเครื่อง / อุปกรณ์</label>
+                    <label>เครื่อง (M/C Code)</label>
                     <select
                         value={formData.asset_id}
                         onChange={(e) => setFormData({ ...formData, asset_id: e.target.value })}

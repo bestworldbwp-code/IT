@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
+import { today, repairDocNo, fmtDate, fmtDateTime } from '../audit/docs.jsx'
 
 const STATUS_META = {
     pending: { label: 'รอรับเรื่อง', bg: '#fee2e2', color: '#b91c1c' },
@@ -30,7 +31,8 @@ export default function RepairList({ onNewRepair, readOnly }) {
         if (filter !== 'all') query = query.eq('status', filter)
         const { data, error } = await query
         setLoading(false)
-        if (!error) setItems(data || [])
+        if (error) alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message)
+        else setItems(data || [])
     }
 
     useEffect(() => {
@@ -44,55 +46,75 @@ export default function RepairList({ onNewRepair, readOnly }) {
         const client = getSupabase()
         const { error } = await client
             .from('repair_requests')
-            .update({ status: 'in_progress', handled_by: handledBy })
+            .update({ status: 'in_progress', handled_by: handledBy, started_at: new Date().toISOString() })
             .eq('id', item.id)
         if (error) alert(error.message)
         else load()
     }
 
-    // ปิดงาน: -> done + บันทึกประวัติบำรุงรักษาอัตโนมัติ
-    async function completeJob(item) {
-        const resolution = prompt('สรุปการซ่อม / สิ่งที่ทำ:', item.resolution || '')
-        if (resolution === null) return
-        const costStr = prompt('ค่าใช้จ่าย (บาท):', item.cost || '0')
-        if (costStr === null) return
-        const cost = parseFloat(costStr) || 0
-        const handledBy = item.handled_by || prompt('ชื่อผู้ซ่อม:', '') || ''
+    // ปิดงาน: เปิดฟอร์มส่วนที่ 2 ของใบแจ้งซ่อม -> done + บันทึกประวัติบำรุงรักษาอัตโนมัติ
+    const [closing, setClosing] = useState(null)
+    const [closeForm, setCloseForm] = useState({})
+    const [saving, setSaving] = useState(false)
+    const savingRef = useRef(false) // state อัปเดตไม่ทันถ้ากดรัว ๆ จึงล็อกด้วย ref
+    function completeJob(item) {
+        setClosing(item)
+        setCloseForm({
+            resolution: item.resolution || '', cost: item.cost || 0, handled_by: item.handled_by || '',
+            repair_result: item.repair_result || 'fixed_no_part', returned_at: today(),
+        })
+    }
 
+    async function submitClose(e) {
+        e.preventDefault()
+        if (savingRef.current) return // กันกดซ้ำ — เคยทำให้ประวัติเครื่องถูกบันทึกซ้ำ
+        savingRef.current = true
+        setSaving(true)
+        try { await doClose() } finally { savingRef.current = false; setSaving(false) }
+    }
+
+    async function doClose() {
+        const item = closing
+        const f = closeForm
+        const cost = parseFloat(f.cost) || 0
         const client = getSupabase()
 
         // 1) ปิดเรื่องแจ้งซ่อม
         const { error: upErr } = await client
             .from('repair_requests')
             .update({
-                status: 'done',
-                resolution,
-                cost,
-                handled_by: handledBy,
+                status: 'done', resolution: f.resolution, cost, handled_by: f.handled_by,
+                repair_result: f.repair_result, returned_at: f.returned_at || null,
+                started_at: item.started_at || item.created_at,
                 completed_at: new Date().toISOString(),
             })
             .eq('id', item.id)
-
         if (upErr) return alert(upErr.message)
 
-        // 2) บันทึกประวัติบำรุงรักษาอัตโนมัติ (เฉพาะที่อ้างอิงทรัพย์สิน)
+        // 2) บันทึกประวัติบำรุงรักษาอัตโนมัติ (เฉพาะที่อ้างอิงทรัพย์สิน) — ตามระเบียบ QP-IT-01 ข้อ 5.3
         if (item.asset_id) {
             const deviceLabel = item.assets?.asset_tag || item.device_name || ''
             const { error: logErr } = await client.from('maintenance_logs').insert({
                 asset_id: item.asset_id,
-                log_type: 'repair',
-                description: `[แจ้งซ่อม #${item.id}] อาการ: ${item.problem}\nการซ่อม: ${resolution}`,
-                performed_by: handledBy,
+                log_type: f.repair_result === 'fixed_replaced' ? 'parts' : 'repair',
+                log_date: today(),
+                description: `อาการ: ${item.problem}\nการซ่อม: ${f.resolution}`,
+                performed_by: f.handled_by,
+                reference_doc: `ใบแจ้งซ่อม No. ${repairDocNo(item)}`,
                 cost,
             })
-            if (logErr) {
-                alert('ปิดงานแล้ว แต่บันทึกประวัติไม่สำเร็จ: ' + logErr.message)
-            } else {
-                alert(`ปิดงานเรียบร้อย และบันทึกลงประวัติบำรุงรักษาของ ${deviceLabel} อัตโนมัติแล้ว`)
+            const { data: asset } = await client.from('assets').select('status').eq('id', item.asset_id).maybeSingle()
+            if (asset) {
+                const next = f.repair_result === 'unfixed_outsource' ? 'repair'
+                    : (f.repair_result === 'fixed_no_part' || f.repair_result === 'fixed_replaced') && asset.status === 'repair' ? 'in_use' : null
+                if (next && next !== asset.status) await client.from('assets').update({ status: next }).eq('id', item.asset_id)
             }
+            if (logErr) alert('ปิดงานแล้ว แต่บันทึกประวัติไม่สำเร็จ: ' + logErr.message)
+            else alert(`ปิดงานเรียบร้อย และบันทึกลงประวัติเครื่อง ${deviceLabel} อัตโนมัติแล้ว`)
         } else {
-            alert('ปิดงานเรียบร้อย (ไม่ได้อ้างอิงทรัพย์สิน จึงไม่ได้ลงประวัติบำรุงรักษา)')
+            alert('ปิดงานเรียบร้อย (ไม่ได้อ้างอิงทรัพย์สิน จึงไม่ได้ลงประวัติเครื่อง)')
         }
+        setClosing(null)
         load()
     }
 
@@ -109,7 +131,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
     return (
         <div>
             <div className="card" style={{ marginBottom: 24, display: 'flex', gap: 16, alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: 8, flex: 1 }}>
+                <div style={{ display: 'flex', gap: 8, flex: 1, flexWrap: 'wrap' }}>
                     {['all', 'pending', 'in_progress', 'done'].map(f => (
                         <button
                             key={f}
@@ -123,12 +145,44 @@ export default function RepairList({ onNewRepair, readOnly }) {
                 <button className="secondary" onClick={load} disabled={loading}>
                     {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
                 </button>
-                <button className="primary" onClick={onNewRepair}>+ แจ้งซ่อมใหม่</button>
             </div>
 
             {pendingCount > 0 && (
                 <div className="card" style={{ marginBottom: 24, background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: 12 }}>
                     🔔 <strong>มีเรื่องแจ้งซ่อมรอดำเนินการ {pendingCount} รายการ</strong>
+                </div>
+            )}
+
+            {closing && (
+                <div className="overlay" onClick={() => setClosing(null)}>
+                    <form className="card" onClick={e => e.stopPropagation()} onSubmit={submitClose}
+                        style={{ maxWidth: 560, margin: '60px auto', padding: 24 }}>
+                        <h3 style={{ marginBottom: 4 }}>ปิดงานซ่อม · {closing.assets?.asset_tag || closing.device_name || `#${closing.id}`}</h3>
+                        <div className="muted" style={{ marginBottom: 16 }}>อาการ: {closing.problem}</div>
+                        <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <label>ผลการซ่อม</label>
+                                <select value={closeForm.repair_result} onChange={e => setCloseForm({ ...closeForm, repair_result: e.target.value })}>
+                                    <option value="fixed_no_part">แก้ปัญหาได้ — ไม่ต้องเปลี่ยนอุปกรณ์</option>
+                                    <option value="fixed_replaced">แก้ปัญหาได้ — ต้องเปลี่ยนอุปกรณ์</option>
+                                    <option value="unfixed_outsource">แก้ไม่ได้ — ส่งซ่อมภายนอก (ตาม QP-PUR-01)</option>
+                                    <option value="unfixed_buy_new">แก้ไม่ได้ — ซื้อใหม่</option>
+                                    <option value="other">อื่นๆ</option>
+                                </select>
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <label>วิธีการแก้ไข / รายละเอียด *</label>
+                                <textarea rows="3" required value={closeForm.resolution} onChange={e => setCloseForm({ ...closeForm, resolution: e.target.value })} />
+                            </div>
+                            <div><label>ผู้ซ่อม</label><input value={closeForm.handled_by} onChange={e => setCloseForm({ ...closeForm, handled_by: e.target.value })} /></div>
+                            <div><label>ค่าใช้จ่าย (บาท)</label><input type="number" min="0" step="0.01" value={closeForm.cost} onChange={e => setCloseForm({ ...closeForm, cost: e.target.value })} /></div>
+                            <div><label>วันที่รับคืน</label><input type="date" value={closeForm.returned_at} onChange={e => setCloseForm({ ...closeForm, returned_at: e.target.value })} /></div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+                            <button className="primary" type="submit" style={{ flex: 1 }} disabled={saving}>{saving ? 'กำลังบันทึก...' : '✅ ปิดงาน'}</button>
+                            <button className="secondary" type="button" onClick={() => setClosing(null)}>ยกเลิก</button>
+                        </div>
+                    </form>
                 </div>
             )}
 
@@ -154,6 +208,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
                                         <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                                             แจ้งโดย: {it.reporter_name || '-'}{it.location ? ` · ${it.location}` : ''}
                                         </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No. {repairDocNo(it)} · {fmtDateTime(it.created_at)}</div>
                                     </td>
                                     <td style={{ padding: '10px 16px', maxWidth: 320, whiteSpace: 'pre-wrap' }}>{it.problem}</td>
                                     <td style={{ padding: '10px 16px' }}>
@@ -165,7 +220,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
                                         </span>
                                         {it.status === 'done' && it.completed_at && (
                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                                                {new Date(it.completed_at).toLocaleDateString()}
+                                                เสร็จ {fmtDate(it.completed_at)}
                                             </div>
                                         )}
                                     </td>

@@ -6,7 +6,7 @@ const initial = {
     spec: '',
     repair_history: '',
     user_id: '',
-    asset_type: 'Desktop',
+    asset_type: 'PC',
     loan_borrower_name: '',
     remarks: '',
 }
@@ -26,7 +26,8 @@ export default function ComputerForm({ computerId, onSaved }) {
             setFetching(true)
             const { data: comp, error } = await client.from('computers').select('*').eq('id', computerId).single()
             setFetching(false)
-            if (!error) setData(comp)
+            if (error) alert(error.message)
+            else setData(comp)
         }
         load()
     }, [computerId])
@@ -35,7 +36,7 @@ export default function ComputerForm({ computerId, onSaved }) {
         e.preventDefault()
         const client = getSupabase()
         setLoading(true)
-        const payload = { ...data }
+        const payload = { ...data, computer_id: String(data.computer_id || '').trim().toUpperCase(), user_id: String(data.user_id || '').trim() }
         delete payload.id
         delete payload.created_at
 
@@ -45,8 +46,13 @@ export default function ComputerForm({ computerId, onSaved }) {
         } else {
             res = await client.from('computers').insert(payload)
         }
+        if (!res.error && payload.computer_id) {
+            // ให้ทะเบียนหลัก (เครื่องและอุปกรณ์ IT) มีผู้ใช้ตรงกัน
+            await client.from('assets').update({ owner: payload.user_id || '' }).eq('asset_tag', payload.computer_id)
+        }
         setLoading(false)
         if (!res.error) onSaved()
+        else alert(res.error.code === '23505' ? `รหัสเครื่องจักร ${payload.computer_id} มีอยู่แล้ว` : res.error.message)
     }
 
     if (fetching) return <div>กำลังโหลด...</div>
@@ -56,37 +62,39 @@ export default function ComputerForm({ computerId, onSaved }) {
             <h2 style={{ marginBottom: 24 }}>{computerId ? 'แก้ไขข้อมูลคอมพิวเตอร์' : 'บันทึกคอมพิวเตอร์ใหม่'}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
-                    <label>Computer ID *</label>
-                    <input required value={data.computer_id} onChange={(e) => setData({ ...data, computer_id: e.target.value })} placeholder="เช่น NB-IT-001" />
+                    <label>รหัสเครื่องจักร (COM-IT-xx) *</label>
+                    <input required value={data.computer_id ?? ''} onChange={(e) => setData({ ...data, computer_id: e.target.value })} placeholder="เช่น COM-IT-65" />
                 </div>
                 <div>
                     <label>ประเภท</label>
-                    <select value={data.asset_type} onChange={(e) => setData({ ...data, asset_type: e.target.value })}>
-                        <option value="Desktop">Desktop PC</option>
+                    <select value={data.asset_type ?? ''} onChange={(e) => setData({ ...data, asset_type: e.target.value })}>
+                        <option value="PC">PC (Desktop)</option>
+                        <option value="All-in-One">All-in-One</option>
                         <option value="Notebook">Notebook / Laptop</option>
                         <option value="Server">Server</option>
                         <option value="Tablet">Tablet</option>
+                        {data.asset_type && !['PC', 'All-in-One', 'Notebook', 'Server', 'Tablet'].includes(data.asset_type) && <option value={data.asset_type}>{data.asset_type}</option>}
                     </select>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                    <label>สเป็กเครื่อง (Specification)</label>
-                    <textarea rows="3" value={data.spec} onChange={(e) => setData({ ...data, spec: e.target.value })} placeholder="เช่น i5-12400, RAM 16GB, SSD 512GB" />
+                <div style={{ gridColumn: '1 / -1' }}>
+                    <label>Capacity / สเปกเครื่อง</label>
+                    <textarea rows="3" value={data.spec ?? ''} onChange={(e) => setData({ ...data, spec: e.target.value })} placeholder="เช่น i5-12400, RAM 16GB, SSD 512GB" />
                 </div>
                 <div>
                     <label>รหัสพนักงานผู้ใช้งาน (User ID)</label>
-                    <input value={data.user_id} onChange={(e) => setData({ ...data, user_id: e.target.value })} />
+                    <input value={data.user_id ?? ''} onChange={(e) => setData({ ...data, user_id: e.target.value })} />
                 </div>
                 <div>
                     <label>ชื่อผู้ยืม (ถ้ามี)</label>
-                    <input value={data.loan_borrower_name} onChange={(e) => setData({ ...data, loan_borrower_name: e.target.value })} />
+                    <input value={data.loan_borrower_name ?? ''} onChange={(e) => setData({ ...data, loan_borrower_name: e.target.value })} />
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
                     <label>ประวัติการซ่อม</label>
-                    <textarea rows="3" value={data.repair_history} onChange={(e) => setData({ ...data, repair_history: e.target.value })} />
+                    <textarea rows="3" value={data.repair_history ?? ''} onChange={(e) => setData({ ...data, repair_history: e.target.value })} />
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
                     <label>หมายเหตุ</label>
-                    <input value={data.remarks} onChange={(e) => setData({ ...data, remarks: e.target.value })} />
+                    <input value={data.remarks ?? ''} onChange={(e) => setData({ ...data, remarks: e.target.value })} />
                 </div>
             </div>
             <button className="primary" style={{ width: '100%', marginTop: 24 }} type="submit" disabled={loading}>

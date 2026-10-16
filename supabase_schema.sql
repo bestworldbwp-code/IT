@@ -204,3 +204,17 @@ BEGIN
         CREATE POLICY "repair_requests_all" ON public.repair_requests FOR ALL USING (true) WITH CHECK (true);
     END IF;
 END $$;
+
+-- [Added 2026-10-15] คอลัมน์ที่ระบบใช้ (ดู migrations/2026-10-15*.sql)
+alter table public.assets add column if not exists building text;
+alter table public.assets add column if not exists position_detail text;
+alter table public.assets add column if not exists rank text default 'A';
+alter table public.assets add column if not exists document_url text;
+alter table public.computers add column if not exists purchase_date date;
+alter table public.repair_requests add column if not exists problem_type text check (problem_type in ('computer', 'printer', 'internet', 'software', 'other'));
+alter table public.repair_requests add column if not exists repair_result text check (repair_result in ('fixed_no_part', 'fixed_replaced', 'unfixed_outsource', 'unfixed_buy_new', 'other'));
+alter table public.repair_requests add column if not exists started_at timestamptz;
+alter table public.repair_requests add column if not exists returned_at date;
+alter table public.maintenance_logs add column if not exists log_date date default current_date;
+alter table public.maintenance_logs add column if not exists reference_doc text;
+alter table public.maintenance_logs add column if not exists remarks text;

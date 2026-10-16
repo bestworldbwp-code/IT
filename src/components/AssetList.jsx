@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import { getSupabase } from '../supabaseClient.js'
+import { useEmployees, EmployeeName } from '../useEmployees.jsx'
+import { assetUrl, machineName, byTag, tagType, textMatch, exportCSV, today } from '../audit/docs.jsx'
+
+const STATUS_TH = { in_use: 'ใช้งาน', stock: 'สำรอง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
+const TYPES = { COM: 'คอมพิวเตอร์', NB: 'โน้ตบุ๊ก', PNT: 'เครื่องพิมพ์', SRV: 'เซิร์ฟเวอร์', NET: 'เครือข่าย' }
 
 export default function AssetList({ onEdit, readOnly }) {
   const [items, setItems] = useState([])
@@ -7,225 +13,157 @@ export default function AssetList({ onEdit, readOnly }) {
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [filterType, setFilterType] = useState('all') // ประเภทจากรหัส AAA-BB-CC: COM / PNT / NB ...
+  const [qr, setQr] = useState(null) // { tag, src }
+  const emp = useEmployees()
 
+  // โหลดทั้งหมดครั้งเดียวแล้วกรองในเครื่อง — ค้นหาด้วยชื่อพนักงานได้ และข้อความที่มี , ( ) ไม่ทำให้ query พัง
   async function load() {
     setError('')
     const client = getSupabase()
     if (!client) return
-
     setLoading(true)
-    let query = client.from('assets').select('*').order('created_at', { ascending: false })
-
-    if (search) {
-      query = query.or(`asset_tag.ilike.%${search}%,serial.ilike.%${search}%,model.ilike.%${search}%,owner.ilike.%${search}%`)
-    }
-
-    if (filterStatus !== 'all') {
-      query = query.eq('status', filterStatus)
-    }
-
-    const { data, error: err } = await query.limit(100)
+    const { data, error: err } = await client.from('assets').select('*').order('asset_tag', { ascending: true }).limit(5000)
     setLoading(false)
-    if (err) {
-      setError(err.message)
-      return
-    }
-    setItems(data || [])
+    if (err) { setError(err.message); return }
+    setItems((data || []).sort(byTag('asset_tag')))
   }
+  useEffect(() => { load() }, [])
 
-  async function deleteItem(id) {
-    if (!confirm('ยืนยันการลบทรัพย์สินนี้?')) return
+  async function deleteItem(it) {
+    const msg = `ลบ ${it.asset_tag} ออกจากทะเบียนถาวร?\n\n⚠️ ประวัติบำรุงรักษาและประวัติยืม-คืนของเครื่องนี้จะถูกลบไปด้วย\nถ้าเครื่องเสีย/เลิกใช้ ให้กด "แก้ไข" แล้วเปลี่ยนสถานะเป็น "ปลดระวาง" แทน (ประวัติยังอยู่สำหรับออดิท)`
+    if (!confirm(msg)) return
     const client = getSupabase()
-    const { error: err } = await client.from('assets').delete().eq('id', id)
-    if (err) {
-      alert(err.message)
-    } else {
-      load()
-    }
+    const { error: err } = await client.from('assets').delete().eq('id', it.id)
+    if (err) alert(err.message)
+    else load()
   }
 
-  const exportToCSV = () => {
-    if (!items.length) return
-    const headers = ['Asset Tag', 'Serial', 'Model', 'CPU', 'RAM', 'Storage', 'Owner', 'Location', 'Purchase Date', 'Status', 'Confidentiality']
-    const csvData = items.map(it => [
-      it.asset_tag, it.serial, it.model, it.cpu, it.ram, it.storage, it.owner, it.location, it.purchase_date, it.status, it.confidentiality_level
-    ].map(v => `"${v || ''}"`).join(','))
+  const typeCounts = items.reduce((m, it) => { const t = tagType(it.asset_tag); m[t] = (m[t] || 0) + 1; return m }, {})
+  const visible = items.filter(it =>
+    (filterType === 'all' || tagType(it.asset_tag) === filterType) &&
+    (filterStatus === 'all' || it.status === filterStatus) &&
+    textMatch(search, it.asset_tag, it.serial, it.model, it.owner, emp[it.owner]?.name, it.location, it.building, it.position_detail)
+  )
 
-    const blob = new Blob([headers.join(',') + '\n' + csvData.join('\n')], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `it_assets_export_${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
+  const doExport = () => {
+    if (!visible.length) return
+    exportCSV(`it_assets_${today()}.csv`,
+      ['รหัสเครื่องจักร', 'ชื่อเครื่องจักร', 'S/N', 'รุ่น', 'CPU', 'RAM', 'Storage', 'รหัสผู้ใช้', 'ชื่อผู้ใช้', 'แผนก/สถานที่', 'อาคาร', 'ตำแหน่ง', 'วันรับเข้า', 'สถานะ'],
+      visible.map(it => [it.asset_tag, machineName(it.asset_tag), it.serial, it.model, it.cpu, it.ram, it.storage, it.owner,
+        it.owner === '0000' ? 'เครื่องส่วนกลาง' : (emp[it.owner]?.name || ''), it.location, it.building, it.position_detail, it.purchase_date, STATUS_TH[it.status] || it.status]))
   }
 
-  const [qrAsset, setQrAsset] = useState(null)
-
-  // ลิงก์ที่ฝังใน QR: สแกนแล้วเปิดแอปมาที่เครื่องนี้ (แจ้งซ่อม/ยืม)
-  const assetUrl = (tag) => `${window.location.origin}${window.location.pathname}?asset=${encodeURIComponent(tag)}`
-  const qrImg = (tag, size = 250) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(assetUrl(tag))}`
-
-  const printSingleQR = (tag) => {
+  // QR สร้างในเครื่อง (เดิมเรียกเว็บภายนอก api.qrserver.com — ไม่มีเน็ตก็ใช้ไม่ได้)
+  async function openQr(tag) {
+    const src = await QRCode.toDataURL(assetUrl(tag), { margin: 1, width: 440, errorCorrectionLevel: 'M' })
+    setQr({ tag, src })
+  }
+  const printSingleQR = ({ tag, src }) => {
     const w = window.open('', '_blank')
+    if (!w) return alert('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาต pop-up แล้วลองอีกครั้ง หรือใช้เมนู "ป้าย QR ติดเครื่อง"')
     w.document.write(`
       <html><head><title>QR ${tag}</title></head>
       <body style="font-family:sans-serif;text-align:center;padding:40px;">
-        <img src="${qrImg(tag, 300)}" style="width:300px;height:300px;" />
-        <div style="font-size:24px;font-weight:700;margin-top:12px;">${tag}</div>
-        <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
+        <img src="${src}" style="width:300px;height:300px;" />
+        <div style="font-size:14px;margin-top:8px;">${machineName(tag)}</div>
+        <div style="font-size:24px;font-weight:700;">${tag}</div>
+        <script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script>
       </body></html>`)
     w.document.close()
-  }
-
-  const printAllQR = async () => {
-    // เปิดหน้าต่างทันที (เลี่ยงถูก popup blocker บล็อกหลัง await)
-    const w = window.open('', '_blank')
-    if (w) w.document.write('<p style="font-family:sans-serif;padding:20px;">กำลังเตรียมป้าย QR ทั้งหมด...</p>')
-
-    // ดึงทรัพย์สินทั้งหมด (ไม่สนตัวกรอง/ค้นหา) เรียงตาม Asset Tag
-    const client = getSupabase()
-    const { data, error: err } = await client
-      .from('assets')
-      .select('asset_tag, model')
-      .order('asset_tag', { ascending: true })
-
-    if (err) { alert(err.message); if (w) w.close(); return }
-    const all = data || []
-    if (!all.length) { alert('ไม่มีข้อมูลทรัพย์สิน'); if (w) w.close(); return }
-
-    const cards = all.map(it => `
-      <div style="border:1px solid #ccc;border-radius:8px;padding:12px;text-align:center;page-break-inside:avoid;">
-        <img src="${qrImg(it.asset_tag, 200)}" style="width:150px;height:150px;" />
-        <div style="font-size:14px;font-weight:700;margin-top:6px;">${it.asset_tag}</div>
-        <div style="font-size:11px;color:#555;">${it.model || ''}</div>
-      </div>`).join('')
-
-    w.document.open()
-    w.document.write(`
-      <html><head><title>QR Codes - ทรัพย์สินทั้งหมด</title></head>
-      <body style="font-family:sans-serif;padding:20px;">
-        <h2>ป้าย QR Code ทรัพย์สิน (${all.length} เครื่อง)</h2>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">${cards}</div>
-        <script>window.onload=function(){setTimeout(function(){window.print()},800)}<\/script>
-      </body></html>`)
-    w.document.close()
-  }
-
-  useEffect(() => {
-    const timer = setTimeout(load, 300)
-    return () => clearTimeout(timer)
-  }, [search, filterStatus])
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'in_use': return '#dcfce7'
-      case 'stock': return '#dbeafe'
-      case 'repair': return '#fef3c7'
-      case 'retired': return '#f3f4f6'
-      default: return '#ffffff'
-    }
-  }
-
-  const getStatusText = (status) => {
-    const map = { in_use: 'ใช้งาน', stock: 'สต๊อก', repair: 'ซ่อม', retired: 'ปลดระวาง' }
-    return map[status] || status
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ margin: 0 }}>รายการทรัพย์สิน</h1>
-        <button className="primary" onClick={load} disabled={loading}>
-          {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
-        </button>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        <button className={filterType === 'all' ? 'primary' : 'secondary'} onClick={() => setFilterType('all')}>ทั้งหมด ({items.length})</button>
+        {Object.keys(typeCounts).sort().map(t => (
+          <button key={t} className={filterType === t ? 'primary' : 'secondary'} onClick={() => setFilterType(t)}>
+            {TYPES[t] || t} ({typeCounts[t]})
+          </button>
+        ))}
       </div>
 
       <div className="card" style={{ marginBottom: 24, display: 'flex', gap: 12 }}>
         <input
-          placeholder="ค้นหา Asset Tag, Serial, รุ่น, หรือเจ้าของ..."
+          placeholder="ค้นหา รหัสเครื่องจักร, S/N, รุ่น, ชื่อหรือรหัสผู้ใช้, สถานที่..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ flex: 1 }}
         />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          style={{ width: 180 }}
-        >
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ width: 180 }}>
           <option value="all">ทุกสถานะ</option>
           <option value="in_use">ใช้งาน</option>
-          <option value="stock">สต๊อก</option>
-          <option value="repair">ซ่อม</option>
+          <option value="stock">สำรอง</option>
+          <option value="repair">ส่งซ่อม</option>
           <option value="retired">ปลดระวาง</option>
         </select>
-        <button className="secondary" onClick={exportToCSV}>📥 Export CSV</button>
-        <button className="secondary" onClick={printAllQR}>🏷️ พิมพ์ QR ทั้งหมด</button>
+        <button className="secondary" onClick={doExport} disabled={!visible.length}>📥 Export CSV</button>
+        <button className="secondary" onClick={() => { window.location.hash = 'qr_labels' }}>🏷️ พิมพ์ป้าย QR</button>
+        <button className="ghost" onClick={load} disabled={loading} title="รีเฟรช">{loading ? '⏳' : '↻'}</button>
       </div>
 
-      {qrAsset && (
+      {qr && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }} onClick={() => setQrAsset(null)}>
+        }} onClick={() => setQr(null)}>
           <div className="card" style={{ textAlign: 'center', padding: 40, maxWidth: 340 }} onClick={e => e.stopPropagation()}>
             <h3 style={{ marginBottom: 8 }}>QR Code เครื่องนี้</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 0, marginBottom: 16 }}>สแกนเพื่อแจ้งซ่อม / ยืมเครื่องนี้</p>
-            <img src={qrImg(qrAsset)} alt="QR Code" style={{ width: 220, height: 220, marginBottom: 16 }} />
-            <div style={{ fontWeight: 700, fontSize: '1.3rem' }}>{qrAsset}</div>
+            <img src={qr.src} alt="QR Code" style={{ width: 220, height: 220, marginBottom: 16 }} />
+            <div style={{ fontWeight: 700, fontSize: '1.3rem' }}>{qr.tag}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-              <button className="secondary" style={{ flex: 1 }} onClick={() => printSingleQR(qrAsset)}>🖨️ พิมพ์</button>
-              <button className="primary" style={{ flex: 1 }} onClick={() => setQrAsset(null)}>ปิด</button>
+              <button className="secondary" style={{ flex: 1 }} onClick={() => printSingleQR(qr)}>🖨️ พิมพ์</button>
+              <button className="primary" style={{ flex: 1 }} onClick={() => setQr(null)}>ปิด</button>
             </div>
           </div>
         </div>
       )}
 
-      {error && <div style={{ color: 'crimson', marginBottom: 12 }}>{error}</div>}
+      {error && <div className="card" style={{ color: '#991b1b', background: '#fef2f2', marginBottom: 12 }}>⚠️ โหลดข้อมูลไม่สำเร็จ: {error}</div>}
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-              <th style={{ padding: '10px 16px' }}>Asset Tag / Serial</th>
-              <th style={{ padding: '10px 16px' }}>Model / Spec</th>
-              <th style={{ padding: '10px 16px' }}>Owner / Location</th>
-              <th style={{ padding: '10px 16px' }}>Status</th>
-              <th style={{ padding: '10px 16px', textAlign: 'right' }}>Actions</th>
+              <th style={{ padding: '10px 16px' }}>รหัสเครื่องจักร / ชื่อเครื่องจักร</th>
+              <th style={{ padding: '10px 16px' }}>รุ่น / Capacity</th>
+              <th style={{ padding: '10px 16px' }}>ผู้ใช้งาน / สถานที่ติดตั้ง</th>
+              <th style={{ padding: '10px 16px' }}>สถานะ</th>
+              <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((it) => (
+            {visible.map((it) => (
               <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <div style={{ fontWeight: 600, color: 'var(--primary)' }}>{it.asset_tag}</div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>S/N: {it.serial}</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{machineName(it.asset_tag)}{it.serial ? ` · S/N ${it.serial}` : ''}</div>
                 </td>
                 <td style={{ padding: '10px 16px' }}>
-                  <div style={{ fontWeight: 500 }}>{it.model}</div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.cpu} / {it.ram} / {it.storage}</div>
+                  <div style={{ fontWeight: 500 }}>{it.model || '-'}</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{[it.cpu, it.ram, it.storage].filter(Boolean).join(' / ')}</div>
                 </td>
                 <td style={{ padding: '10px 16px' }}>
-                  <div>{it.owner || '-'}</div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{it.location || '-'}</div>
+                  <div><EmployeeName id={it.owner} map={emp} /></div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{[it.building, it.position_detail, it.location].filter(Boolean).join(' · ') || '-'}</div>
                 </td>
                 <td style={{ padding: '10px 16px' }}>
-                  <span className={`status-badge status-${it.status}`}>
-                    {it.status === 'in_use' ? 'ใช้งาน' : it.status === 'stock' ? 'สำรอง' : it.status === 'repair' ? 'ส่งซ่อม' : 'ปลดระวาง'}
-                  </span>
+                  <span className={`status-badge status-${it.status}`}>{STATUS_TH[it.status] || it.status || '-'}</span>
                 </td>
                 <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => setQrAsset(it.asset_tag)}>QR</button>
+                    <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => openQr(it.asset_tag)}>QR</button>
                     {!readOnly && <button className="secondary" style={{ padding: '6px 12px' }} onClick={() => onEdit(it.id)}>แก้ไข</button>}
-                    {!readOnly && <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it.id)}>ลบ</button>}
+                    {!readOnly && <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteItem(it)}>ลบ</button>}
                   </div>
                 </td>
               </tr>
             ))}
-            {!items.length && !loading && (
+            {!visible.length && !loading && (
               <tr>
-                <td colSpan="5" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
-                  ไม่พบข้อมูลทรัพย์สิน
-                </td>
+                <td colSpan="5" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>ไม่พบข้อมูล</td>
               </tr>
             )}
           </tbody>

@@ -25,7 +25,8 @@ export default function SparePartsForm({ sparePartId, onSaved }) {
             setFetching(true)
             const { data: part, error } = await client.from('spare_parts').select('*').eq('id', sparePartId).single()
             setFetching(false)
-            if (!error) setData(part)
+            if (error) alert(error.message)
+            else setData(part)
         }
         load()
     }, [sparePartId])
@@ -34,7 +35,7 @@ export default function SparePartsForm({ sparePartId, onSaved }) {
         e.preventDefault()
         const client = getSupabase()
         setLoading(true)
-        const payload = { ...data }
+        const payload = { ...data, stock_quantity: parseInt(data.stock_quantity, 10) || 0, min_stock_level: parseInt(data.min_stock_level, 10) || 0 }
         delete payload.id
         delete payload.created_at
 
@@ -49,17 +50,19 @@ export default function SparePartsForm({ sparePartId, onSaved }) {
         else alert(res.error.message)
     }
 
+    if (fetching) return <div>กำลังโหลด...</div>
+
     return (
         <form onSubmit={handleSubmit}>
             <h2 style={{ marginBottom: 24 }}>{sparePartId ? 'แก้ไขข้อมูลอะไหล่' : 'เพิ่มอะไหล่ใหม่'}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
                     <label>ชื่อรายการ *</label>
-                    <input required value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} placeholder="เช่น เมาส์ไร้สาย Logitech, หมึก HP 85A" />
+                    <input required value={data.name ?? ''} onChange={(e) => setData({ ...data, name: e.target.value })} placeholder="เช่น เมาส์ไร้สาย Logitech, หมึก HP 85A" />
                 </div>
                 <div>
                     <label>หมวดหมู่</label>
-                    <select value={data.category} onChange={(e) => setData({ ...data, category: e.target.value })}>
+                    <select value={data.category ?? ''} onChange={(e) => setData({ ...data, category: e.target.value })}>
                         <option value="Peripheral">อุปกรณ์ต่อพ่วง (Keyboard/Mouse)</option>
                         <option value="Consumable">วัสดุสิ้นเปลือง (Toner/Ink)</option>
                         <option value="Component">ชิ้นส่วนภายใน (RAM/SSD/HDD)</option>
@@ -68,19 +71,19 @@ export default function SparePartsForm({ sparePartId, onSaved }) {
                 </div>
                 <div>
                     <label>สถานที่จัดเก็บ (Storage location)</label>
-                    <input value={data.location} onChange={(e) => setData({ ...data, location: e.target.value })} placeholder="ตู้เลขที่... / ชั้น..." />
+                    <input value={data.location ?? ''} onChange={(e) => setData({ ...data, location: e.target.value })} placeholder="ตู้เลขที่... / ชั้น..." />
                 </div>
                 <div>
                     <label>จำนวนคงเหลือตอนนี้</label>
-                    <input type="number" value={data.stock_quantity} onChange={(e) => setData({ ...data, stock_quantity: parseInt(e.target.value) })} />
+                    <input type="number" value={data.stock_quantity ?? ''} min="0" onChange={(e) => setData({ ...data, stock_quantity: e.target.value })} />
                 </div>
                 <div>
                     <label>จุดที่ต้องสั่งซื้อเพิ่ม (Min Stock)</label>
-                    <input type="number" value={data.min_stock_level} onChange={(e) => setData({ ...data, min_stock_level: parseInt(e.target.value) })} />
+                    <input type="number" value={data.min_stock_level ?? ''} min="0" onChange={(e) => setData({ ...data, min_stock_level: e.target.value })} />
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
                     <label>หมายเหตุ</label>
-                    <textarea rows="3" value={data.remarks} onChange={(e) => setData({ ...data, remarks: e.target.value })} />
+                    <textarea rows="3" value={data.remarks ?? ''} onChange={(e) => setData({ ...data, remarks: e.target.value })} />
                 </div>
             </div>
             <button className="primary" style={{ width: '100%', marginTop: 24 }} type="submit" disabled={loading}>

@@ -27,7 +27,8 @@ export default function EmployeeForm({ employeeId, onSaved }) {
             setFetching(true)
             const { data: emp, error } = await client.from('employees').select('*').eq('id', employeeId).single()
             setFetching(false)
-            if (!error) setData(emp)
+            if (error) alert(error.message)
+            else setData(emp)
         }
         load()
     }, [employeeId])
@@ -48,7 +49,7 @@ export default function EmployeeForm({ employeeId, onSaved }) {
         }
         setLoading(false)
         if (!res.error) onSaved()
-        else alert(res.error.message)
+        else alert(res.error.code === '23505' ? `รหัสพนักงาน ${payload.employee_id} มีอยู่แล้ว` : res.error.message)
     }
 
     if (fetching) return <div>กำลังโหลด...</div>
@@ -59,35 +60,35 @@ export default function EmployeeForm({ employeeId, onSaved }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
                     <label>รหัสพนักงาน *</label>
-                    <input required value={data.employee_id} onChange={(e) => setData({ ...data, employee_id: e.target.value })} placeholder="เช่น 66001" />
+                    <input required value={data.employee_id ?? ''} onChange={(e) => setData({ ...data, employee_id: e.target.value })} placeholder="เช่น 66001" />
                 </div>
                 <div>
                     <label>ชื่อ-นามสกุล *</label>
-                    <input required value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} />
+                    <input required value={data.name ?? ''} onChange={(e) => setData({ ...data, name: e.target.value })} />
                 </div>
                 <div>
                     <label>ตำแหน่ง</label>
-                    <input value={data.position} onChange={(e) => setData({ ...data, position: e.target.value })} />
+                    <input value={data.position ?? ''} onChange={(e) => setData({ ...data, position: e.target.value })} />
                 </div>
                 <div>
                     <label>แผนก</label>
-                    <input value={data.department} onChange={(e) => setData({ ...data, department: e.target.value })} />
+                    <input value={data.department ?? ''} onChange={(e) => setData({ ...data, department: e.target.value })} />
                 </div>
                 <div>
                     <label>อีเมล</label>
-                    <input type="email" value={data.email} onChange={(e) => setData({ ...data, email: e.target.value })} />
+                    <input type="email" value={data.email ?? ''} onChange={(e) => setData({ ...data, email: e.target.value })} />
                 </div>
                 <div>
                     <label>เบอร์โทรศัพท์ (โต๊ะ)</label>
-                    <input value={data.desk_phone} onChange={(e) => setData({ ...data, desk_phone: e.target.value })} />
+                    <input value={data.desk_phone ?? ''} onChange={(e) => setData({ ...data, desk_phone: e.target.value })} />
                 </div>
                 <div>
                     <label>Username (System)</label>
-                    <input value={data.username} onChange={(e) => setData({ ...data, username: e.target.value })} />
+                    <input value={data.username ?? ''} onChange={(e) => setData({ ...data, username: e.target.value })} />
                 </div>
                 <div>
                     <label>Share Drive Path</label>
-                    <input value={data.user_share_drive_path} onChange={(e) => setData({ ...data, user_share_drive_path: e.target.value })} placeholder="\\server\share\..." />
+                    <input value={data.user_share_drive_path ?? ''} onChange={(e) => setData({ ...data, user_share_drive_path: e.target.value })} placeholder="\\server\share\..." />
                 </div>
             </div>
             <button className="primary" style={{ width: '100%', marginTop: 24 }} type="submit" disabled={loading}>

@@ -7,11 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 5173",
-    "import:all": "node scripts/import-from-csv.js"
+    "import:all": "node scripts/import-from-csv.js",
+    "password": "node scripts/password-hash.js",
+    "backup": "node scripts/backup-to-file.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.46.0",
     "csv-parse": "^6.1.0",
+    "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

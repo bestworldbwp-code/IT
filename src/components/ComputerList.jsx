@@ -1,80 +1,71 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
+import { useEmployees, EmployeeName } from '../useEmployees.jsx'
+import { byTag, textMatch, exportCSV, today } from '../audit/docs.jsx'
 
 export default function ComputerList({ onEdit, readOnly }) {
     const [items, setItems] = useState([])
     const [loading, setLoading] = useState(false)
     const [search, setSearch] = useState('')
+    const emp = useEmployees()
 
     async function load() {
         const client = getSupabase()
         if (!client) return
         setLoading(true)
-        let query = client.from('computers').select('*').order('created_at', { ascending: false })
-        if (search) {
-            query = query.or(`computer_id.ilike.%${search}%,spec.ilike.%${search}%,loan_borrower_name.ilike.%${search}%`)
-        }
-        const { data, error } = await query
+        const { data, error } = await client.from('computers').select('*').order('computer_id', { ascending: true })
         setLoading(false)
-        if (!error) setItems(data || [])
+        if (error) alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message)
+        else setItems((data || []).sort(byTag('computer_id')))
     }
+    useEffect(() => { load() }, [])
 
     async function deleteItem(id) {
-        if (!confirm('ยืนยันการลบรายการนี้?')) return
+        if (!confirm('ยืนยันการลบรายการนี้จากทะเบียนคอมพิวเตอร์ชุดเดิม?\n(ทะเบียนหลักอยู่ที่หน้า "เครื่องและอุปกรณ์ IT")')) return
         const client = getSupabase()
         const { error } = await client.from('computers').delete().eq('id', id)
         if (error) alert(error.message)
         else load()
     }
 
-    const exportToCSV = () => {
-        if (!items.length) return
-        const headers = ['Computer ID', 'Type', 'Spec', 'User ID', 'Remarks']
-        const csvData = items.map(it => [
-            it.computer_id, it.asset_type, it.spec, it.user_id, it.remarks
-        ].map(v => `"${v || ''}"`).join(','))
-        const blob = new Blob([headers.join(',') + '\n' + csvData.join('\n')], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = `it_computers_${new Date().toISOString().split('T')[0]}.csv`
-        link.click()
-    }
+    const visible = items.filter(it => textMatch(search, it.computer_id, it.spec, it.user_id, emp[it.user_id]?.name, it.loan_borrower_name, it.asset_type, it.remarks))
 
-    useEffect(() => {
-        const timer = setTimeout(load, 300)
-        return () => clearTimeout(timer)
-    }, [search])
+    const doExport = () => {
+        if (!visible.length) return
+        exportCSV(`it_computers_${today()}.csv`, ['รหัสเครื่องจักร', 'ชนิด', 'สเปก', 'รหัสผู้ใช้', 'ชื่อผู้ใช้', 'ผู้ยืม', 'ประวัติซ่อม', 'หมายเหตุ'],
+            visible.map(it => [it.computer_id, it.asset_type, it.spec, it.user_id, it.user_id === '0000' ? 'เครื่องส่วนกลาง' : (emp[it.user_id]?.name || ''), it.loan_borrower_name, it.repair_history, it.remarks]))
+    }
 
     return (
         <div>
             <div className="card" style={{ marginBottom: 24, display: 'flex', gap: 16 }}>
                 <input
-                    placeholder="ค้นหา Computer ID, สเปก, หรือผู้ใช้..."
+                    placeholder="ค้นหา รหัสเครื่องจักร, สเปก, ชื่อหรือรหัสผู้ใช้..."
                     value={search}
                     style={{ flex: 1 }}
                     onChange={(e) => setSearch(e.target.value)}
                 />
-                <button className="secondary" onClick={exportToCSV}>📥 Export CSV</button>
+                <button className="secondary" onClick={doExport} disabled={!visible.length}>📥 Export CSV</button>
             </div>
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
-                            <th style={{ padding: '10px 16px' }}>Computer ID</th>
-                            <th style={{ padding: '10px 16px' }}>Specification</th>
-                            <th style={{ padding: '10px 16px' }}>User / Borrower</th>
-                            <th style={{ padding: '10px 16px' }}>Type</th>
+                            <th style={{ padding: '10px 16px' }}>รหัสเครื่องจักร</th>
+                            <th style={{ padding: '10px 16px' }}>Capacity / สเปก</th>
+                            <th style={{ padding: '10px 16px' }}>ผู้ใช้งาน / ผู้ยืม</th>
+                            <th style={{ padding: '10px 16px' }}>ชนิด</th>
                             <th style={{ padding: '10px 16px', textAlign: 'right' }}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {items.map((it) => (
+                        {visible.map((it) => (
                             <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ padding: '10px 16px', fontWeight: 600 }}>{it.computer_id}</td>
                                 <td style={{ padding: '10px 16px', fontSize: '0.875rem' }}>{it.spec}</td>
                                 <td style={{ padding: '10px 16px' }}>
-                                    <div>{it.user_id || it.loan_borrower_name || '-'}</div>
+                                    <div><EmployeeName id={it.user_id} map={emp} />{it.loan_borrower_name && <div style={{ fontSize: '0.8rem', color: '#b45309' }}>ยืม: {it.loan_borrower_name}</div>}</div>
                                 </td>
                                 <td style={{ padding: '10px 16px' }}>{it.asset_type}</td>
                                 <td style={{ padding: '10px 16px', textAlign: 'right' }}>
@@ -87,6 +78,9 @@ export default function ComputerList({ onEdit, readOnly }) {
                                 </td>
                             </tr>
                         ))}
+                        {!visible.length && !loading && (
+                            <tr><td colSpan="5" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>ไม่พบข้อมูล</td></tr>
+                        )}
                     </tbody>
                 </table>
             </div>

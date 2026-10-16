@@ -22,7 +22,8 @@ export default function PrinterForm({ printerId, onSaved }) {
             setFetching(true)
             const { data: prn, error } = await client.from('printers').select('*').eq('id', printerId).single()
             setFetching(false)
-            if (!error) setData(prn)
+            if (error) alert(error.message)
+            else setData(prn)
         }
         load()
     }, [printerId])
@@ -31,7 +32,7 @@ export default function PrinterForm({ printerId, onSaved }) {
         e.preventDefault()
         const client = getSupabase()
         setLoading(true)
-        const payload = { ...data }
+        const payload = { ...data, printer_id: String(data.printer_id || '').trim().toUpperCase(), user_id: String(data.user_id || '').trim() }
         delete payload.id
         delete payload.created_at
 
@@ -41,9 +42,12 @@ export default function PrinterForm({ printerId, onSaved }) {
         } else {
             res = await client.from('printers').insert(payload)
         }
+        if (!res.error && payload.printer_id) {
+            await client.from('assets').update({ owner: payload.user_id || '' }).eq('asset_tag', payload.printer_id)
+        }
         setLoading(false)
         if (!res.error) onSaved()
-        else alert(res.error.message)
+        else alert(res.error.code === '23505' ? `รหัสเครื่องจักร ${payload.printer_id} มีอยู่แล้ว` : res.error.message)
     }
 
     if (fetching) return <div>กำลังโหลด...</div>
@@ -53,16 +57,16 @@ export default function PrinterForm({ printerId, onSaved }) {
             <h2 style={{ marginBottom: 24 }}>{printerId ? 'แก้ไขข้อมูลเครื่องพิมพ์' : 'บันทึกเครื่องพิมพ์ใหม่'}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
-                    <label>Printer ID *</label>
-                    <input required value={data.printer_id} onChange={(e) => setData({ ...data, printer_id: e.target.value })} placeholder="เช่น PRN-ACC-01" />
+                    <label>รหัสเครื่องจักร (PNT-IT-xx) *</label>
+                    <input required value={data.printer_id ?? ''} onChange={(e) => setData({ ...data, printer_id: e.target.value })} placeholder="เช่น PNT-IT-27" />
                 </div>
                 <div>
-                    <label>รุ่น/โมเดล</label>
-                    <input value={data.model} onChange={(e) => setData({ ...data, model: e.target.value })} placeholder="เช่น HP LaserJet Pro M404" />
+                    <label>รุ่น (Brand / Model)</label>
+                    <input value={data.model ?? ''} onChange={(e) => setData({ ...data, model: e.target.value })} placeholder="เช่น HP LaserJet Pro M404" />
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
                     <label>รหัสพนักงานผู้ใช้งานหลัก</label>
-                    <input value={data.user_id} onChange={(e) => setData({ ...data, user_id: e.target.value })} />
+                    <input value={data.user_id ?? ''} onChange={(e) => setData({ ...data, user_id: e.target.value })} />
                 </div>
             </div>
             <button className="primary" style={{ width: '100%', marginTop: 24 }} type="submit" disabled={loading}>
