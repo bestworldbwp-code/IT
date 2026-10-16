@@ -1,8 +1,3 @@
--- [Extended Fields for Legacy Data Migration]
-alter table public.computers add column if not exists repair_history text;
-alter table public.employees add column if not exists user_share_drive_path text;
-alter table public.assets add column if not exists category text;
-
 -- [Full Schema Definitions for New Supabase Project]
 -- Assets
 create table if not exists public.assets (
@@ -18,6 +13,7 @@ create table if not exists public.assets (
   owner text,
   location text,
   purchase_date date,
+  warranty_expiry date,
   document_url text,
   confidentiality_level text default 'internal',
   integrity_level text default 'medium',
@@ -206,6 +202,7 @@ BEGIN
 END $$;
 
 -- [Added 2026-10-15] คอลัมน์ที่ระบบใช้ (ดู migrations/2026-10-15*.sql)
+alter table public.assets add column if not exists warranty_expiry date;
 alter table public.assets add column if not exists building text;
 alter table public.assets add column if not exists position_detail text;
 alter table public.assets add column if not exists rank text default 'A';
@@ -218,3 +215,6 @@ alter table public.repair_requests add column if not exists returned_at date;
 alter table public.maintenance_logs add column if not exists log_date date default current_date;
 alter table public.maintenance_logs add column if not exists reference_doc text;
 alter table public.maintenance_logs add column if not exists remarks text;
+
+-- [Added 2026-10-16] เลขที่ใบแจ้งซ่อมถาวร — ดู migrations/2026-10-16_repair_doc_no.sql (มี trigger)
+alter table public.repair_requests add column if not exists doc_no text;

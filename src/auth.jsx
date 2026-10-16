@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react'
 // เปลี่ยน PIN: npm run password -- PINใหม่  แล้วเอาค่าที่ได้ไปใส่ .env.local หรือ Vercel
 // ค่าเริ่มต้น = PIN 1234 (ใช้เมื่อไม่ได้ตั้ง VITE_ADMIN_PASSWORD_HASH) — เปลี่ยน PIN: npm run password -- PINใหม่
 const DEFAULT_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'
-const HASH = import.meta.env.VITE_ADMIN_PASSWORD_HASH || DEFAULT_PIN_HASH
+// trim/lowercase กันวางค่าใน Vercel แล้วมีช่องว่างหรือเป็นตัวพิมพ์ใหญ่ติดมา (จะ login ไม่ได้เลย)
+const HASH = String(import.meta.env.VITE_ADMIN_PASSWORD_HASH || DEFAULT_PIN_HASH).trim().toLowerCase()
 const KEY = 'it_admin_ok'
 
 // crypto.subtle มีเฉพาะหน้าเว็บที่เป็น HTTPS หรือ localhost — ถ้าเปิดผ่าน http://IP-ในบริษัท จะไม่มี

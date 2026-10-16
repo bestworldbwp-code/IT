@@ -26,6 +26,16 @@ function loadEnv() {
 
 loadEnv()
 
+// ⚠️ สคริปต์นี้ใช้นำเข้าข้อมูลครั้งแรกจากไฟล์ CSV ใน database/ (ข้อมูลเดือน ม.ค. 2569)
+// ถ้ารันตอนนี้จะ "เขียนทับ" ผู้ใช้ สถานะ และรุ่นของทุกเครื่อง รวมถึงรายชื่อพนักงาน ด้วยข้อมูลเก่า
+// การกู้คืนจากไฟล์สำรองให้ใช้: npm run restore -- <ไฟล์ it-asset-backup_*.json>
+if (!process.argv.includes('--overwrite-current-data')) {
+  console.error('หยุด: สคริปต์นี้จะเขียนทับข้อมูลปัจจุบันด้วยไฟล์ CSV เก่า')
+  console.error('ถ้าต้องการกู้คืนจากไฟล์สำรอง ใช้: npm run restore -- <ไฟล์ it-asset-backup_*.json>')
+  console.error('ถ้าตั้งใจนำเข้า CSV เก่าจริง ๆ ให้รัน: npm run import:legacy-csv -- --overwrite-current-data')
+  process.exit(1)
+}
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {

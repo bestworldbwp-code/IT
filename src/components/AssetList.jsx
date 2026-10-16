@@ -123,7 +123,7 @@ export default function AssetList({ onEdit, readOnly }) {
 
       {error && <div className="card" style={{ color: '#991b1b', background: '#fef2f2', marginBottom: 12 }}>⚠️ โหลดข้อมูลไม่สำเร็จ: {error}</div>}
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>

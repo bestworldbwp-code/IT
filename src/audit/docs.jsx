@@ -4,24 +4,46 @@ import { useEffect, useState } from 'react'
 const KEY = 'doc_settings'
 const DEFAULTS = { company: 'บริษัท เบสท์เวิลด์ อินเตอร์พลาส จำกัด', dept: 'แผนก IT', preparer: '', reviewer: '', approver: '', appUrl: '' }
 
+// เก็บค่าไว้ที่เดียวและแจ้งทุกส่วนที่ใช้เมื่อมีการแก้ — เดิมแก้ชื่อผู้ลงนามในฟอร์มแล้ว
+// หัวเอกสาร/ช่องลงนามที่อยู่หน้าเดียวกันไม่อัปเดต สั่งพิมพ์ทันทีจะได้ชื่อเก่า
+let current = null
+const listeners = new Set()
+const read = () => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') } } catch { return { ...DEFAULTS } } }
 export function getDocSettings() {
-  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') } } catch { return DEFAULTS }
+  if (!current) current = read()
+  return current
 }
 export function saveDocSettings(s) {
-  try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* ignore */ }
+  current = { ...DEFAULTS, ...s }
+  try { localStorage.setItem(KEY, JSON.stringify(current)) } catch { /* ignore */ }
+  listeners.forEach(fn => fn())
 }
 export function useDocSettings() {
-  const [s, setS] = useState(getDocSettings)
-  useEffect(() => { saveDocSettings(s) }, [s])
-  return [s, setS]
+  const [s, setLocal] = useState(getDocSettings)
+  useEffect(() => {
+    const fn = () => setLocal(getDocSettings())
+    listeners.add(fn)
+    return () => listeners.delete(fn)
+  }, [])
+  return [s, (next) => saveDocSettings(typeof next === 'function' ? next(getDocSettings()) : next)]
 }
 
 // URL สาธารณะของระบบ (ใช้ฝังใน QR) ถ้ายังไม่ตั้งค่าจะใช้ที่อยู่ปัจจุบัน
-// ใส่ https:// ให้เองถ้าพิมพ์มาแค่ชื่อโดเมน (กล้องมือถือจะได้รู้ว่าเป็นลิงก์)
+// - ไม่ใส่ http/https มา → ใช้แบบเดียวกับหน้าที่เปิดอยู่ (เซิร์ฟเวอร์ในบริษัทมักเป็น http)
+// - ตัด #หน้า, ?ค่า และ /index.html ออก (วาง URL จากแถบที่อยู่ เช่น .../#qr_labels แล้ว ?asset= จะไปอยู่หลัง # สแกนแล้วเจอหน้า login)
 export const normalizeAppUrl = (u) => {
-  const s = String(u || '').trim().replace(/\/+$/, '')
-  if (!s) return (window.location.origin + window.location.pathname).replace(/\/+$/, '')
-  return /^https?:\/\//i.test(s) ? s : `https://${s}`
+  let s = String(u || '').trim()
+  if (!s) s = window.location.origin + window.location.pathname
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) s = `${window.location.protocol}//${s}`
+  try {
+    const url = new URL(s)
+    url.hash = ''
+    url.search = ''
+    url.pathname = url.pathname.replace(/\/index\.html?$/i, '/')
+    return url.toString().replace(/\/+$/, '')
+  } catch {
+    return s.replace(/[#?].*$/, '').replace(/\/index\.html?$/i, '').replace(/\/+$/, '')
+  }
 }
 export const getAppUrl = () => normalizeAppUrl(getDocSettings().appUrl)
 export const assetUrl = (tag, base = getAppUrl()) => `${base}/?asset=${encodeURIComponent(tag)}`
@@ -44,10 +66,12 @@ export const localStamp = () => {
 export const monthKey = (d) => d ? localDateOf(d).slice(0, 7) : ''
 
 // เลขที่ใบแจ้งซ่อม YYMM-NNN (ปี ค.ศ. 2 หลัก + เดือนที่แจ้ง + เลขลำดับ) ใช้ที่เดียวกันทุกหน้า
-export const repairDocNo = (it) => {
-  const d = localDateOf(it?.created_at)
-  return `${d.slice(2, 4)}${d.slice(5, 7)}-${String(it?.id ?? '').padStart(3, '0')}`
+// ใช้เลขที่ที่เก็บไว้ในฐานข้อมูล (doc_no — ดู migrations/2026-10-16_repair_doc_no.sql) ถ้ามี เพื่อไม่ให้เลขเปลี่ยนหลังกู้คืน
+export const computeRepairDocNo = (createdAt, id) => {
+  const d = localDateOf(createdAt)
+  return `${d.slice(2, 4)}${d.slice(5, 7)}-${String(id ?? '').padStart(3, '0')}`
 }
+export const repairDocNo = (it) => it?.doc_no || computeRepairDocNo(it?.created_at, it?.id)
 
 // พนักงานที่ลาออกถูกติดป้าย "[ลาออก]" หน้าชื่อ (ดู scripts/employees-diff.js)
 export const isLeaver = (name) => /^\[ลาออก\]/.test(String(name || ''))
@@ -67,7 +91,9 @@ export function exportCSV(filename, headers, rows) {
 
 // ---------- ดาวน์โหลดไฟล์ ----------
 export function downloadText(filename, text, type = 'text/plain') {
-  const blob = new Blob(['﻿' + text], { type: type + ';charset=utf-8;' })
+  // BOM ใส่เฉพาะ CSV (ให้ Excel อ่านภาษาไทยถูก) — ไฟล์ JSON ที่มี BOM จะ JSON.parse ไม่ได้ตอนกู้คืน
+  const bom = type === 'text/csv' ? '﻿' : ''
+  const blob = new Blob([bom + text], { type: type + ';charset=utf-8;' })
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
   a.download = filename
@@ -83,7 +109,7 @@ export function toCSV(rows, columns) {
 
 // ---------- ส่วนประกอบเอกสาร ----------
 export function DocHeader({ title, code, rev = '00', issued, extra }) {
-  const s = getDocSettings()
+  const [s] = useDocSettings()
   return (
     <div className="doc-header">
       <div className="doc-org">
@@ -104,7 +130,7 @@ export function DocHeader({ title, code, rev = '00', issued, extra }) {
 }
 
 export function SignatureBlock({ roles }) {
-  const s = getDocSettings()
+  const [s] = useDocSettings()
   const list = roles || [
     { role: 'ผู้จัดทำ (เจ้าหน้าที่ IT)', name: s.preparer },
     { role: 'ทบทวนโดย', name: s.reviewer },
@@ -176,6 +202,9 @@ export function machineName(tag) {
   if (!m) return tag || ''
   return `${TYPE_NAME[m[1].toUpperCase()] || m[1].toUpperCase()} ${m[3]}`
 }
+// สถานที่ติดตั้ง = อาคาร · ตำแหน่ง · แผนก (ไม่มีแผนก ใช้แผนกของผู้ใช้) — ทะเบียน 01:01 กับประวัติ 01:02 ต้องตรงกัน
+export const assetLocation = (a, ownerDept) => [a?.building, a?.position_detail, a?.location || ownerDept].filter(Boolean).join(' · ')
+
 // หายี่ห้อจากข้อความรุ่น (ข้อมูลเดิมเก็บสเปกปนยี่ห้อ เช่น "I5 1200 16GB ACER") — ไม่เจอให้เว้นว่างไว้กรอกมือ
 const BRANDS = ['ACER', 'ASUS', 'DELL', 'HP', 'LENOVO', 'HUAWEI', 'APPLE', 'MSI', 'GIGABYTE', 'EPSON', 'CANON', 'BROTHER', 'HONEYWELL', 'SAMSUNG', 'FUJI', 'XEROX', 'RICOH', 'KYOCERA']
 export const guessBrand = (model) => {

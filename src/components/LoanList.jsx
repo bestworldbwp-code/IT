@@ -32,6 +32,14 @@ export default function LoanList({ onNewLoan, readOnly }) {
         else load()
     }
 
+    async function deleteLoan(it) {
+        if (!confirm(`ลบรายการยืม ${it.assets?.asset_tag || ''} ของ ${it.employee?.name || it.employee_id} ?
+(ใช้เมื่อบันทึกผิด — ถ้ายืมจริงและคืนแล้วให้กด "คืนเครื่อง" แทน)`)) return
+        const { error } = await getSupabase().from('loans').delete().eq('id', it.id)
+        if (error) alert(error.message)
+        else load()
+    }
+
     const t = today()
     const overdue = (it) => it.status === 'active' && it.due_date && it.due_date < t
     const visible = items.filter(it => textMatch(search, it.assets?.asset_tag, it.assets?.model, it.employee?.name, it.employee_id, it.remarks))
@@ -54,7 +62,7 @@ export default function LoanList({ onNewLoan, readOnly }) {
                 <button className="secondary" onClick={doExport} disabled={!visible.length}>📥 Export CSV</button>
             </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
@@ -85,8 +93,11 @@ export default function LoanList({ onNewLoan, readOnly }) {
                                     {it.return_date && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>คืน {fmtDate(it.return_date)}</div>}
                                 </td>
                                 <td style={{ padding: '10px 16px', textAlign: 'right' }}>
-                                    {it.status === 'active' && !readOnly && (
-                                        <button className="secondary" onClick={() => markAsReturned(it.id)}>คืนเครื่อง</button>
+                                    {!readOnly && (
+                                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                            {it.status === 'active' && <button className="secondary" onClick={() => markAsReturned(it.id)}>คืนเครื่อง</button>}
+                                            <button className="danger" style={{ padding: '6px 12px' }} onClick={() => deleteLoan(it)}>ลบ</button>
+                                        </div>
                                     )}
                                 </td>
                             </tr>

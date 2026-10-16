@@ -37,7 +37,8 @@ export default function EmployeeForm({ employeeId, onSaved }) {
         e.preventDefault()
         const client = getSupabase()
         setLoading(true)
-        const payload = { ...data }
+        // ตัดช่องว่างหัวท้าย — รหัสที่มีช่องว่างติดมาจะจับคู่กับเครื่องไม่ได้
+        const payload = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v]))
         delete payload.id
         delete payload.created_at
 
@@ -49,7 +50,8 @@ export default function EmployeeForm({ employeeId, onSaved }) {
         }
         setLoading(false)
         if (!res.error) onSaved()
-        else alert(res.error.code === '23505' ? `รหัสพนักงาน ${payload.employee_id} มีอยู่แล้ว` : res.error.message)
+        else alert(res.error.code === '23505' ? `รหัสพนักงาน ${payload.employee_id} มีอยู่แล้ว`
+            : res.error.code === '23503' ? 'แก้ไม่ได้ — รหัสพนักงานนี้ถูกอ้างอยู่ในประวัติยืม-คืน' : res.error.message)
     }
 
     if (fetching) return <div>กำลังโหลด...</div>
@@ -60,7 +62,7 @@ export default function EmployeeForm({ employeeId, onSaved }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
                     <label>รหัสพนักงาน *</label>
-                    <input required value={data.employee_id ?? ''} onChange={(e) => setData({ ...data, employee_id: e.target.value })} placeholder="เช่น 66001" />
+                    <input required readOnly={!!employeeId} title={employeeId ? 'รหัสพนักงานถูกอ้างในทะเบียนเครื่อง จึงแก้ไม่ได้ — ถ้ารหัสผิดให้เพิ่มพนักงานใหม่แล้วย้ายเครื่อง' : undefined} value={data.employee_id ?? ''} onChange={(e) => setData({ ...data, employee_id: e.target.value })} placeholder="เช่น 66001" />
                 </div>
                 <div>
                     <label>ชื่อ-นามสกุล *</label>

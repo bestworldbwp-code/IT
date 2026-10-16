@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
-import { DocHeader, SignatureBlock, DocToolbar, fmtDate, downloadText, toCSV, today, machineName, typeThai, byTag } from './docs.jsx'
+import { DocHeader, SignatureBlock, DocToolbar, fmtDate, downloadText, toCSV, today, machineName, typeThai, byTag, assetLocation } from './docs.jsx'
 
 const STATUS_TH = { in_use: 'ใช้งาน', stock: 'สำรอง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
 
@@ -35,8 +35,10 @@ export default function RegisterPage() {
       const user = emp[x.owner]
       return {
         id: x.id, tag: x.asset_tag, type: typeThai(x.asset_tag, x.category), name: machineName(x.asset_tag),
+        // เลขเครื่องจากรหัส (เดิมใช้ลำดับแถว ซึ่งเลื่อนเมื่อมีเครื่องปลดระวาง/กรองออก)
+        typeNo: `${typeThai(x.asset_tag, x.category)} ${parseInt(String(x.asset_tag).split('-').pop(), 10) || ''}`.trim(),
         model: x.model || cp?.asset_type || '', capacity: [x.cpu, x.ram, x.storage].filter(Boolean).join(' / ') || cp?.spec || '',
-        location: [x.building, x.position_detail, x.location || user?.department].filter(Boolean).join(' · '), received: x.purchase_date || cp?.purchase_date || '',
+        location: assetLocation(x, user?.department), received: x.purchase_date || cp?.purchase_date || '',
         rank: x.rank || 'A',
         user: x.owner === '0000' ? 'เครื่องส่วนกลาง' : user ? `${user.name}` : (x.owner || ''), status: x.status, remarks: cp?.remarks || '',
       }
@@ -58,7 +60,7 @@ export default function RegisterPage() {
   }, [filtered])
 
   const columns = [
-    { label: 'ที่', get: (r, i) => i + 1 }, { label: 'ชนิด', get: r => r.type }, { label: 'ชื่อเครื่องจักร', key: 'name' },
+    { label: 'ที่', get: (r, i) => i + 1 }, { label: 'ชนิด', get: r => r.typeNo }, { label: 'ชื่อเครื่องจักร', key: 'name' },
     { label: 'รุ่น', key: 'model' }, { label: 'รหัสเครื่องจักร', key: 'tag' }, { label: 'Capacity', key: 'capacity' },
     { label: 'สถานที่ติดตั้ง', key: 'location' }, { label: 'วันรับเข้า', get: r => r.received || '' }, { label: 'RANK', key: 'rank' },
     ...(showUser ? [{ label: 'ผู้ใช้งาน', key: 'user' }, { label: 'สถานะ', get: r => STATUS_TH[r.status] || r.status }] : []),
@@ -92,7 +94,7 @@ export default function RegisterPage() {
             <tbody>
               {list.map((r, i) => (
                 <tr key={r.id}>
-                  <td>{i + 1}</td><td>{r.type} {i + 1}</td><td>{r.name}</td><td>{r.model || '-'}</td><td><strong>{r.tag}</strong></td>
+                  <td>{i + 1}</td><td>{r.typeNo}</td><td>{r.name}</td><td>{r.model || '-'}</td><td><strong>{r.tag}</strong></td>
                   <td>{r.capacity || '-'}</td><td>{r.location || '-'}</td><td>{r.received ? fmtDate(r.received) : ''}</td><td style={{ textAlign: 'center' }}>{r.rank}</td>
                   {showUser && <><td>{r.user}</td><td>{STATUS_TH[r.status] || r.status}</td></>}
                 </tr>

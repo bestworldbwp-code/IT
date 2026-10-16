@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 import { DocHeader, DocToolbar, fmtDate, repairDocNo, monthKey } from './docs.jsx'
 
@@ -25,23 +25,34 @@ export default function RepairFormPage() {
   const [month, setMonth] = useState('')
   const [picked, setPicked] = useState(new Set())
 
+  // กรองที่ฐานข้อมูล — Supabase ส่งได้ครั้งละ 1,000 แถว ถ้ากรองในเครื่อง ใบเก่าของเดือนก่อน ๆ จะหาไม่เจอเมื่อมีใบเยอะ
+  const reqRef = useRef(0)
   async function load() {
     const client = getSupabase()
     if (!client) return
+    const req = ++reqRef.current
     setLoading(true)
-    const { data, error } = await client.from('repair_requests').select('*, assets(asset_tag, model, serial, owner, location)').order('created_at', { ascending: false }).limit(2000)
+    let q = client.from('repair_requests').select('*, assets(asset_tag, model, serial, owner, location)').order('created_at', { ascending: false }).limit(1000)
+    if (filter !== 'all') q = q.eq('status', filter)
+    if (month) {
+      // ขอบเดือนตามเวลาไทย
+      const [y, m] = month.split('-').map(Number)
+      q = q.gte('created_at', new Date(y, m - 1, 1).toISOString()).lt('created_at', new Date(y, m, 1).toISOString())
+    }
+    const { data, error } = await q
+    if (req !== reqRef.current) return
     if (error) alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message)
     setItems(data || [])
     setLoading(false)
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { setPicked(new Set()); load() }, [filter, month]) // เปลี่ยนตัวกรองแล้วล้างที่เลือกไว้ ไม่ให้ "เลือก 5 ใบ" ค้างทั้งที่พิมพ์ไม่ครบ
 
   const filtered = useMemo(() => items.filter(it =>
     (filter === 'all' || it.status === filter) && (!month || monthKey(it.created_at) === month)
   ), [items, filter, month])
 
   const toPrint = picked.size ? filtered.filter(it => picked.has(it.id)) : filtered.slice(0, 1)
-  const toggle = (id) => setPicked(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggle = (id) => setPicked(s => { const n = new Set(s); n.delete(0); n.has(id) ? n.delete(id) : n.add(id); return n })
   const docNo = repairDocNo
 
   return (

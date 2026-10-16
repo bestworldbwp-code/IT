@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
-import { DocHeader, SignatureBlock, DocToolbar, Field, fmtDate, fmtDateTime, machineName, byTag, repairDocNo, guessBrand, textMatch } from './docs.jsx'
+import { DocHeader, SignatureBlock, DocToolbar, Field, fmtDate, fmtDateTime, machineName, byTag, repairDocNo, guessBrand, textMatch, assetLocation } from './docs.jsx'
 
 const STATUS_TH = { in_use: 'ใช้งาน', stock: 'สำรอง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
 const LOG_TYPE = { repair: 'ซ่อมแซม / แก้ไข', parts: 'เปลี่ยนอะไหล่', preventive: 'บำรุงรักษาตามแผน', inspection: 'ตรวจเช็ค', update: 'ติดตั้ง / อัปเดต', upgrade: 'อัปเกรด', install: 'ติดตั้ง', backup_check: 'ตรวจสอบสำรองข้อมูล', other: 'อื่น ๆ' }
@@ -43,15 +43,14 @@ export default function HistoryPage() {
   }, [])
 
   const matches = useMemo(() => {
-    if (!search.trim()) return devices.slice(0, 40)
-    return devices.filter(d => textMatch(search, d.tag, d.sub)).slice(0, 40)
+    return devices.filter(d => textMatch(search, d.tag, d.sub))
   }, [devices, search])
 
-  async function ownerLabel(client, id) {
-    if (!id) return ''
-    if (id === '0000') return 'เครื่องส่วนกลาง'
+  async function ownerInfo(client, id) {
+    if (!id) return { label: '', dept: '' }
+    if (id === '0000') return { label: 'เครื่องส่วนกลาง', dept: '' }
     const { data } = await client.from('employees').select('name, department').eq('employee_id', id).maybeSingle()
-    return data ? `${data.name}${data.department ? ` (${data.department})` : ''}` : id
+    return data ? { label: `${data.name}${data.department ? ` (${data.department})` : ''}`, dept: data.department || '' } : { label: id, dept: '' }
   }
 
   async function select(d) {
@@ -78,12 +77,12 @@ export default function HistoryPage() {
           // ใบแจ้งซ่อมที่ปิดแล้วจะถูกลงประวัติ (maintenance_logs) อัตโนมัติ — แสดงแค่รายการเดียว ไม่นับค่าใช้จ่ายซ้ำ
           .filter((e, _, all) => !(e.kind === 'แจ้งซ่อม' && e.done && all.some(x => x.kind === 'บำรุงรักษา' && x.ref === e.ref)))
           .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-        const owner = await ownerLabel(client, asset.data.owner)
-        if (req === reqRef.current) setDetail({ info: { ...asset.data, ownerLabel: owner }, events })
+        const owner = await ownerInfo(client, asset.data.owner)
+        if (req === reqRef.current) setDetail({ info: { ...asset.data, ownerLabel: owner.label, ownerDept: owner.dept }, events })
       } else {
         const x = d.raw
-        const owner = await ownerLabel(client, x.user_id)
-        if (req === reqRef.current) setDetail({ info: { asset_tag: x.computer_id, model: x.spec, category: x.asset_type, ownerLabel: owner, status: null }, events: legacyEvents(x.repair_history) })
+        const owner = await ownerInfo(client, x.user_id)
+        if (req === reqRef.current) setDetail({ info: { asset_tag: x.computer_id, model: x.spec, category: x.asset_type, ownerLabel: owner.label, ownerDept: owner.dept, status: null }, events: legacyEvents(x.repair_history) })
       }
     } catch (e) {
       if (req === reqRef.current) setError(e.message)
@@ -132,7 +131,7 @@ export default function HistoryPage() {
                     <Field label="Capacity" value={[detail.info.cpu, detail.info.ram, detail.info.storage].filter(Boolean).join(' / ') || detail.info.model} />
                     <Field label="Model" value={detail.info.model} />
                     <Field label="S/N No" value={detail.info.serial} />
-                    <Field label="Location" value={[detail.info.building, detail.info.position_detail, detail.info.location].filter(Boolean).join(' · ')} />
+                    <Field label="Location" value={assetLocation(detail.info, detail.info.ownerDept)} />
                     <Field label="Received Date" value={detail.info.purchase_date ? fmtDate(detail.info.purchase_date) : ''} />
                     <Field label="ผู้ใช้งาน" value={detail.info.ownerLabel} />
                     <Field label="สถานะ" value={STATUS_TH[detail.info.status] || detail.info.status} />

@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 5173",
-    "import:all": "node scripts/import-from-csv.js",
     "password": "node scripts/password-hash.js",
-    "backup": "node scripts/backup-to-file.js"
+    "backup": "node scripts/backup-to-file.js",
+    "restore": "node scripts/restore-from-backup.js",
+    "import:legacy-csv": "node scripts/import-from-csv.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.46.0",

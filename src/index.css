@@ -401,6 +401,8 @@ tbody td button { padding: 6px 12px !important; font-size: 0.82rem; }
 .label-tag { font-weight: 800; font-size: 1.35em; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .label-sub { font-size: 0.85em; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+@page landscape { size: A4 landscape; margin: 10mm 10mm; }
+
 @media print {
   .label-sheet-wrap { padding: 0; overflow: visible; }
   .label { border-color: #cbd5e1; }
@@ -411,8 +413,13 @@ tbody td button { padding: 6px 12px !important; font-size: 0.82rem; }
   .app, .main { display: block; }
   .content { padding: 0; max-width: none; }
   .card, .doc { border: none; box-shadow: none; border-radius: 0; padding: 0; }
+  /* บนกระดาษเลื่อนดูไม่ได้ — overflow:auto ทำให้คอลัมน์ขวาของตารางถูกตัดหาย */
+  .card, .doc, .card:has(> table) { overflow: visible !important; }
   .doc.sheet { page-break-after: always; }
-  .doc.landscape { font-size: 0.78rem; }
+  .doc.sheet:last-child { page-break-after: auto; } /* ไม่ให้มีหน้าว่างต่อท้าย */
+  /* เอกสารคอลัมน์เยอะ (ทะเบียนเครื่อง, ใบสำรวจ) พิมพ์แนวนอน */
+  .doc.landscape { font-size: 0.78rem; page: landscape; }
+  .doc-table td { overflow-wrap: break-word; } /* ตัดเฉพาะข้อความยาวเกินช่อง ไม่หั่นตัวเลขลำดับ */
   .doc-table { font-size: 0.75rem; }
   .doc-table thead { display: table-header-group; }
   .doc-table tr { page-break-inside: avoid; }

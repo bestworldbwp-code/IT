@@ -57,14 +57,14 @@ const PAGES = {
     Form: (p) => <AssetForm assetId={p.id} onSaved={p.onSaved} />,
   },
   computers: {
-    label: 'คอมพิวเตอร์', icon: '💻', title: 'คอมพิวเตอร์ (ข้อมูลเดิม)', desc: 'ทะเบียนคอมพิวเตอร์ชุดเดิม — สเปก ผู้ใช้ และประวัติซ่อมแบบข้อความ',
-    addLabel: 'เพิ่มเครื่อง',
+    label: 'คอมพิวเตอร์', icon: '💻', title: 'คอมพิวเตอร์ (ข้อมูลเดิม)', desc: 'ทะเบียนคอมพิวเตอร์ชุดเดิม — เพิ่มเครื่องใหม่ที่หน้า เครื่องและอุปกรณ์ IT',
+    noAdd: true,
     List: (p) => <ComputerList onEdit={p.onEdit} readOnly={p.readOnly} />,
     Form: (p) => <ComputerForm computerId={p.id} onSaved={p.onSaved} />,
   },
   printers: {
-    label: 'เครื่องพิมพ์', icon: '🖨️', title: 'เครื่องพิมพ์ (ข้อมูลเดิม)', desc: 'ทะเบียนเครื่องพิมพ์ชุดเดิม',
-    addLabel: 'เพิ่มเครื่องพิมพ์',
+    label: 'เครื่องพิมพ์', icon: '🖨️', title: 'เครื่องพิมพ์ (ข้อมูลเดิม)', desc: 'ทะเบียนเครื่องพิมพ์ชุดเดิม — เพิ่มเครื่องใหม่ที่หน้า เครื่องและอุปกรณ์ IT',
+    noAdd: true,
     List: (p) => <PrinterList onEdit={p.onEdit} readOnly={p.readOnly} />,
     Form: (p) => <PrinterForm printerId={p.id} onSaved={p.onSaved} />,
   },
@@ -198,7 +198,7 @@ export default function App() {
 
   const page = PAGES[activeTab]
   const readOnly = false
-  const canAdd = !!page.Form
+  const canAdd = !!page.Form && !page.noAdd
 
   return (
     <div className="app">

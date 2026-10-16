@@ -25,7 +25,7 @@ export default function Dashboard({ onNavigate }) {
         setLoadError('')
         try {
         const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('หมดเวลารอ (ตรวจสอบอินเทอร์เน็ตหรือสถานะโปรเจกต์ Supabase)')), 10000))
-        const [assets, computers, software, spare, loans, pendingRepairs, expiredLicenses, overdueLoans, spareRows, leavers, ownerRows, repairs] = await Promise.race([timeout, Promise.all([
+        const [assets, computers, software, spare, loans, pendingRepairs, expiredLicenses, overdueLoans, spareRows, allEmployees, ownerRows, repairs] = await Promise.race([timeout, Promise.all([
             count(client.from('assets').select('id', head)),
             count(client.from('computers').select('id', head)),
             count(client.from('software').select('id', head)),
@@ -35,7 +35,7 @@ export default function Dashboard({ onNavigate }) {
             count(client.from('software').select('id', head).lt('expiry_date', today)),
             count(client.from('loans').select('id', head).eq('status', 'active').lt('due_date', today)),
             client.from('spare_parts').select('stock_quantity, min_stock_level').then(check).then(r => r.data || []),
-            client.from('employees').select('employee_id, name').like('name', '[ลาออก]%').then(check).then(r => r.data || []),
+            client.from('employees').select('employee_id, name').then(check).then(r => r.data || []),
             client.from('assets').select('owner').neq('status', 'retired').then(check).then(r => r.data || []),
             client.from('repair_requests').select('id, problem, status, created_at, device_name, reporter_name, assets(asset_tag)')
                 .order('created_at', { ascending: false }).limit(5).then(check).then(r => r.data || []),
@@ -45,9 +45,12 @@ export default function Dashboard({ onNavigate }) {
         const lowStock = spareRows.filter(r => r.min_stock_level != null && (r.stock_quantity ?? 0) <= r.min_stock_level).length
 
         // เครื่องที่ผู้ถือครองลาออกแล้ว (ชื่อในทะเบียนพนักงานขึ้นต้น [ลาออก]) ต้องไปสำรวจว่าใครใช้ต่อ
-        const leftIds = new Set(leavers.map(e => e.employee_id))
+        const leftIds = new Set(allEmployees.filter(e => String(e.name).startsWith('[ลาออก]')).map(e => e.employee_id))
         const leaverAssets = ownerRows.filter(a => leftIds.has(a.owner)).length
-        setStats({ assets, computers, software, spare, loans, pendingRepairs, expiredLicenses, overdueLoans, lowStock, leaverAssets })
+        // ผู้ใช้ที่ไม่ใช่รหัสพนักงาน (พิมพ์ชื่อเล่น/ตัวย่อลงช่องผู้ใช้) — ออดิทจะถามว่าเครื่องอยู่กับใคร
+        const empIds = new Set(allEmployees.map(e => e.employee_id))
+        const unknownOwners = allEmployees.length ? ownerRows.filter(a => a.owner && a.owner !== '0000' && !empIds.has(a.owner)).length : 0
+        setStats({ assets, computers, software, spare, loans, pendingRepairs, expiredLicenses, overdueLoans, lowStock, leaverAssets, unknownOwners })
         setRecentRepairs(repairs)
         if (firstError) setLoadError(firstError.message)
         } catch (e) {
@@ -70,6 +73,7 @@ export default function Dashboard({ onNavigate }) {
 
     const alerts = stats ? [
         { n: stats.leaverAssets, label: 'เครื่องที่ผู้ถือครองลาออกแล้ว (ไปสำรวจ)', icon: '🚪', tab: 'survey' },
+        { n: stats.unknownOwners, label: 'ผู้ใช้ไม่ตรงกับทะเบียนพนักงาน (ไปแก้ในหน้าสำรวจ)', icon: '❔', tab: 'survey' },
         { n: stats.pendingRepairs, label: 'งานแจ้งซ่อมที่ยังไม่ปิด', icon: '🛎️', tab: 'repairs' },
         { n: stats.overdueLoans, label: 'ยืมเกินกำหนดคืน', icon: '⏰', tab: 'loans' },
         { n: stats.expiredLicenses, label: 'ลิขสิทธิ์หมดอายุแล้ว', icon: '📄', tab: 'software' },

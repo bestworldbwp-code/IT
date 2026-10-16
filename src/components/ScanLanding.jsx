@@ -17,7 +17,7 @@ export default function ScanLanding({ assetTag, onRepair, onLoan, onClose }) {
             const { data, error: err } = await client
                 .from('assets')
                 .select('id, asset_tag, model, owner, location, building, position_detail, status')
-                .eq('asset_tag', assetTag)
+                .eq('asset_tag', String(assetTag || '').trim().toUpperCase())
                 .maybeSingle()
             if (err) { setError(err.message); setLoading(false); return }
             if (!data) { setNotFound(true); setLoading(false); return }

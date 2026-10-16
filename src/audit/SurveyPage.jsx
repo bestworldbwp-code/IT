@@ -27,21 +27,26 @@ export default function SurveyPage() {
   const [printMode, setPrintMode] = useState(false)
   const searchRef = useRef(null)
   const busy = useRef(false) // กันกดบันทึกซ้ำ (จะได้ประวัติสำรวจซ้ำ)
-  const ROUND = useMemo(currentRound, [])
+  // รอบสำรวจคำนวณใหม่ทุกครั้งที่โหลด — เปิดหน้าค้างข้ามเดือนจะได้ไม่บันทึกเข้ารอบเก่า
+  const [ROUND, setRound] = useState(currentRound)
 
   async function load() {
     const client = getSupabase()
     if (!client) return
+    const round = currentRound()
+    setRound(round)
     const [a, e, s] = await Promise.all([
       client.from('assets').select('id, asset_tag, model, owner, location, building, position_detail, status, category').neq('status', 'retired').order('asset_tag'), // เครื่องที่ปลดระวางแล้วไม่ต้องสำรวจ
       client.from('employees').select('employee_id, name, department, position').order('employee_id'),
-      client.from('audit_logs').select('*').eq('action', 'survey').order('created_at', { ascending: false }),
+      client.from('audit_logs').select('*').eq('action', 'survey').eq('new_data->>round', round).order('created_at', { ascending: false }),
     ])
+    const err = a.error || e.error || s.error
+    if (err) { alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message); return }
     setAssets((a.data || []).sort(byTag('asset_tag')))
     setEmployees(e.data || [])
     const m = {}
     for (const log of (s.data || [])) {
-      if (log.new_data?.round === ROUND && !m[log.record_id]) m[log.record_id] = log
+      if (log.new_data?.round === round && !m[log.record_id]) m[log.record_id] = log
     }
     setSurveyed(m)
   }
@@ -66,10 +71,16 @@ export default function SurveyPage() {
 
   function open(a) {
     setCurrent(a)
+    // ผู้ใช้/สถานที่ ดึงจากทะเบียนปัจจุบันเสมอ (ถ้าแก้ที่หน้าเครื่องหลังสำรวจ จะไม่ถูกค่าเก่าในประวัติสำรวจทับกลับ)
     const prev = surveyed[a.id]?.new_data
-    const emp = empById[prev?.owner ?? a.owner]
-    setForm({ owner: prev?.owner ?? a.owner ?? '', building: prev?.building ?? a.building ?? '', position: prev?.position ?? a.position_detail ?? '', dept: prev?.dept ?? a.location ?? emp?.department ?? '', condition: prev?.condition || 'ok', note: prev?.note || '' })
+    const emp = empById[a.owner]
+    // สภาพเริ่มต้นตามสถานะปัจจุบัน — เดิมเป็น "ใช้งานปกติ" เสมอ กดบันทึกเครื่องสำรองโดยไม่แก้อะไร สถานะจะกลายเป็น "ใช้งาน"
+    const byStatus = a.status === 'stock' ? 'spare' : a.status === 'repair' ? 'damaged' : 'ok'
+    setForm({ owner: a.owner ?? '', building: a.building ?? '', position: a.position_detail ?? '', dept: a.location ?? emp?.department ?? '', condition: prev?.condition || byStatus, note: prev?.note || '' })
   }
+
+  // "ไม่มีผู้ใช้" = ไม่มีชื่อ และเลือกสภาพเป็นเก็บสำรอง (กดปุ่ม ⛔) — เครื่องที่แค่ยังไม่ระบุชื่อไม่นับ
+  const noUser = form.owner === '' && form.condition === 'spare'
 
   // รับได้ทั้ง "110001" และ "110001 - ชื่อ (แผนก)" จาก datalist
   const parseOwner = (v) => String(v || '').split(' - ')[0].trim()
@@ -79,7 +90,8 @@ export default function SurveyPage() {
     if (!v || v === '0000' || empById[v]) return v
     const q = v.toLowerCase()
     const hits = employees.filter(e => !isLeaver(e.name) && e.name.toLowerCase().includes(q))
-    return hits.length === 1 ? hits[0].employee_id : null
+    // เจอคนเดียวก็ยังถามก่อน — ชื่อเล่นสั้น ๆ อาจไปตรงกับคนอื่นโดยบังเอิญ
+    return hits.length === 1 && confirm(`หมายถึง ${hits[0].name} (${hits[0].employee_id}) ใช่ไหม?`) ? hits[0].employee_id : null
   }
 
   async function save(e) {
@@ -103,19 +115,24 @@ export default function SurveyPage() {
     else if (form.condition === 'ok' && (current.status === 'stock' || current.status === 'repair')) patch.status = 'in_use'
     else if (form.condition === 'damaged') patch.status = 'repair'
 
-    const { error } = await client.from('assets').update(patch).eq('id', current.id)
-    if (error) { alert(error.message); return }
+    // "ไม่พบเครื่อง" = ยืนยันอะไรไม่ได้ → ไม่แก้ทะเบียน บันทึกแค่ผลสำรวจ
+    const missing = form.condition === 'missing'
+    if (!missing) {
+      const { error } = await client.from('assets').update(patch).eq('id', current.id)
+      if (error) { alert(error.message); return }
 
-    // ให้ตารางเดิม (computers / printers) ตรงกับผลสำรวจด้วย
-    await Promise.all([
-      client.from('computers').update({ user_id: owner }).eq('computer_id', current.asset_tag),
-      client.from('printers').update({ user_id: owner }).eq('printer_id', current.asset_tag),
-    ])
+      // ให้ตารางเดิม (computers / printers) ตรงกับผลสำรวจด้วย
+      await Promise.all([
+        client.from('computers').update({ user_id: owner }).eq('computer_id', current.asset_tag),
+        client.from('printers').update({ user_id: owner }).eq('printer_id', current.asset_tag),
+      ])
+    }
 
     const { error: logErr } = await client.from('audit_logs').insert({
       action: 'survey', table_name: 'assets', record_id: String(current.id),
       old_data: { owner: current.owner, location: current.location, building: current.building, position_detail: current.position_detail, status: current.status },
-      new_data: { round: ROUND, asset_tag: current.asset_tag, owner, location, building: form.building.trim(), position: form.position.trim(), dept: form.dept.trim(), condition: form.condition, note: form.note.trim(), ...patch },
+      new_data: { round: currentRound(), asset_tag: current.asset_tag, condition: form.condition, note: form.note.trim(),
+        ...(missing ? {} : { owner, location, building: form.building.trim(), position: form.position.trim(), dept: form.dept.trim(), ...patch }) },
       performed_by: getDocSettings().preparer || 'IT Admin',
     })
     if (logErr) alert('บันทึกเครื่องแล้ว แต่บันทึกประวัติสำรวจไม่สำเร็จ: ' + logErr.message)
@@ -192,15 +209,17 @@ export default function SurveyPage() {
               <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label>ผู้ใช้งานจริงตอนนี้</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input list="emp-list" value={form.owner} onChange={e => setForm({ ...form, owner: e.target.value })} placeholder="พิมพ์รหัสหรือชื่อพนักงาน" />
+                  {/* บนมือถือ ช่องพิมพ์อยู่บรรทัดบน ปุ่มลงบรรทัดล่าง — เดิมช่องถูกบีบเหลือ ~70px มองไม่เห็นที่พิมพ์ */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <input list="emp-list" value={form.owner} onChange={e => setForm({ ...form, owner: e.target.value })} placeholder="พิมพ์รหัสหรือชื่อพนักงาน" style={{ flex: '1 1 220px' }} />
                     <button type="button" className={parseOwner(form.owner) === '0000' ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, owner: '0000' })} title="ไม่มีผู้ใช้ประจำ ใช้ร่วมกันในแผนก">🏢 ส่วนกลาง</button>
-                    <button type="button" className={form.owner === '' ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, owner: '', condition: form.condition === 'ok' ? 'spare' : form.condition })} title="ไม่มีคนใช้แล้ว เครื่องว่าง → จะตั้งสภาพเป็นเก็บสำรองให้">⛔ ไม่มีผู้ใช้</button>
+                    <button type="button" className={noUser ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, owner: '', condition: form.condition === 'ok' ? 'spare' : form.condition })} title="ไม่มีคนใช้แล้ว เครื่องว่าง → จะตั้งสภาพเป็นเก็บสำรองให้">⛔ ไม่มีผู้ใช้</button>
                   </div>
                   <datalist id="emp-list">
                     {employees.filter(e => !isLeaver(e.name) && e.employee_id !== '0000').map(e => <option key={e.employee_id} value={`${e.employee_id} - ${e.name}${e.department ? ` (${e.department})` : ''}`} />)}
                   </datalist>
-                  {form.owner === '' && <div className="muted" style={{ marginTop: 4, color: '#b45309' }}>→ ไม่มีผู้ใช้ประจำ: บันทึกแล้วชื่อเดิมจะถูกถอดออก และสถานะเครื่องเป็น "สำรอง"</div>}
+                  {noUser && <div className="muted" style={{ marginTop: 4, color: '#b45309' }}>→ ไม่มีผู้ใช้ประจำ: บันทึกแล้วชื่อเดิมจะถูกถอดออก และสถานะเครื่องเป็น "สำรอง"</div>}
+                  {form.owner === '' && !noUser && <div className="muted" style={{ marginTop: 4 }}>ยังไม่ระบุผู้ใช้ — เลือกชื่อ, กด "ส่วนกลาง" หรือ "ไม่มีผู้ใช้"</div>}
                   {parseOwner(form.owner) && empById[parseOwner(form.owner)] && (
                     <div className="muted" style={{ marginTop: 4 }}>→ {empLabel(parseOwner(form.owner))}{empById[parseOwner(form.owner)].position ? ` · ตำแหน่ง ${empById[parseOwner(form.owner)].position}` : ''}</div>
                   )}
@@ -270,7 +289,7 @@ function PaperSheet({ assets, empLabel, round, onBack }) {
         <button className="primary" style={{ marginLeft: 'auto' }} onClick={() => window.print()}>🖨️ พิมพ์</button>
       </div>
       <div className="doc card landscape">
-        <DocHeader title="ใบสำรวจเครื่องคอมพิวเตอร์และอุปกรณ์ IT (ใช้ปรับปรุงทะเบียน FQP-IT-01:01)" extra={[['รอบสำรวจ', round], ['จำนวน', `${assets.length} เครื่อง`]]} />
+        <DocHeader title="ใบสำรวจเครื่องคอมพิวเตอร์และอุปกรณ์ IT (ใช้ปรับปรุงทะเบียน FQP-IT-01:01)" extra={[['รอบสำรวจ', new Date(round + '-01').toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })], ['จำนวน', `${assets.length} เครื่อง`]]} />
         <table className="doc-table">
           <thead>
             <tr>

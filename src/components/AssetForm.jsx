@@ -25,6 +25,7 @@ export default function AssetForm({ assetId, onSaved }) {
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState('')
   const [employees, setEmployees] = useState([])
+  const [origTag, setOrigTag] = useState('') // รหัสก่อนแก้ — ใช้เปลี่ยนรหัสในทะเบียนเดิมให้ตรง
 
   useEffect(() => {
     async function loadAsset() {
@@ -40,6 +41,7 @@ export default function AssetForm({ assetId, onSaved }) {
         setError(err.message)
       } else {
         setData(asset)
+        setOrigTag(asset.asset_tag || '')
       }
     }
     loadAsset()
@@ -62,20 +64,43 @@ export default function AssetForm({ assetId, onSaved }) {
     if (!client) return
 
     setLoading(true)
-    const payload = { ...data, asset_tag: String(data.asset_tag || '').trim().toUpperCase(), owner: String(data.owner || '').trim() }
+    const payload = {
+      ...data,
+      asset_tag: String(data.asset_tag || '').trim().toUpperCase(),
+      owner: String(data.owner || '').trim(),
+      // ช่องวันที่ที่เว้นว่างเป็น '' ซึ่งคอลัมน์ date ไม่รับ — ขึ้นทะเบียนเครื่องใหม่โดยไม่กรอกวันที่จึงบันทึกไม่ได้
+      purchase_date: data.purchase_date || null,
+      warranty_expiry: data.warranty_expiry || null,
+      disposal_date: data.disposal_date || null,
+    }
+    if (payload.owner && payload.owner !== '0000' && employees.length && !employees.some(e => e.employee_id === payload.owner)) {
+      const hits = employees.filter(e => !isLeaver(e.name) && e.name.includes(payload.owner))
+      // พิมพ์ชื่อมา → ถามก่อนแปลงเป็นรหัส (ชื่อเล่นสั้น ๆ อาจไปตรงกับคนอื่นโดยบังเอิญ)
+      if (hits.length === 1 && confirm(`หมายถึง ${hits[0].name} (${hits[0].employee_id}) ใช่ไหม?`)) payload.owner = hits[0].employee_id
+      else if (!confirm(`"${payload.owner}" ไม่ใช่รหัสพนักงานในทะเบียน — ควรเลือกจากรายชื่อที่ขึ้นให้\n\nบันทึกตามที่พิมพ์ไว้เลยไหม?`)) { setLoading(false); return }
+    }
     delete payload.id
     delete payload.created_at
     if (!payload.category) payload.category = categoryOfTag(payload.asset_tag)
 
     const save = (body) => assetId ? client.from('assets').update(body).eq('id', assetId) : client.from('assets').insert(body)
     let result = await save(payload)
-    // ฐานข้อมูลบางชุดยังไม่มีคอลัมน์นี้ (ดู migrations/2026-10-15c) — ตัดออกแล้วบันทึกซ้ำ ไม่ให้ผู้ใช้ติดค้าง
+    // ฐานข้อมูลบางชุดยังไม่มีคอลัมน์นี้ (ดู migrations/2026-10-15c) — ตัดออกแล้วบันทึกซ้ำ แต่ต้องบอกผู้ใช้ว่าลิงก์ไม่ถูกเก็บ
     if (result.error?.message?.includes("'document_url' column")) {
+      const lostLink = payload.document_url
       delete payload.document_url
       result = await save(payload)
+      if (!result.error && lostLink) alert('บันทึกเครื่องแล้ว แต่ลิงก์เอกสารไม่ถูกบันทึก — ต้องรัน SQL ไฟล์ migrations/2026-10-15c_assets_document_url.sql ใน Supabase ก่อน')
     }
 
     if (!result.error) {
+      // เปลี่ยนรหัสเครื่อง → เปลี่ยนในทะเบียนเดิมด้วย ไม่งั้นรหัสเก่าจะโผล่เป็นอีกเครื่องในหน้าประวัติ
+      if (assetId && origTag && origTag !== payload.asset_tag) {
+        await Promise.all([
+          client.from('computers').update({ computer_id: payload.asset_tag }).eq('computer_id', origTag),
+          client.from('printers').update({ printer_id: payload.asset_tag }).eq('printer_id', origTag),
+        ])
+      }
       // ทะเบียนชุดเดิม (computers / printers) ให้ผู้ใช้ตรงกับทะเบียนหลักเสมอ
       await Promise.all([
         client.from('computers').update({ user_id: payload.owner }).eq('computer_id', payload.asset_tag),

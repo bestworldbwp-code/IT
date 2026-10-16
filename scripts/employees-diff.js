@@ -9,7 +9,9 @@ const c = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)
 const nw = JSON.parse(readFileSync(new URL('../migrations/employees_new.json', import.meta.url), 'utf8'))
 const apply = process.argv.includes('--apply')
 
-const norm = s => String(s || '').replace(/^(นาย|นาง|น\.ส\.|นางสาว)\s*/, '').replace(/\s+/g, ' ').trim()
+// คำนำหน้า: ยาวก่อนสั้น ("นางสาว" ก่อน "นาง") ไม่งั้น "นางสาวสมใจ" จะกลายเป็น "สาวสมใจ" และถูกนับว่าชื่อเปลี่ยน
+const norm = s => String(s || '').replace(/^\[ลาออก\]\s*/, '').replace(/^(นางสาว|น\.ส\.|นาง|นาย|ด\.ช\.|ด\.ญ\.|mrs?\.?|ms\.?|miss)\s*/i, '').replace(/\s+/g, ' ').trim().toLowerCase()
+const normText = s => String(s || '').replace(/\s+/g, ' ').trim()
 
 const old = (await c.from('employees').select('id, employee_id, name, department, position')).data
 const assets = (await c.from('assets').select('asset_tag, owner, status')).data
@@ -22,9 +24,9 @@ const added = nw.filter(x => !oldMap[x.employee_id])
 const changed = nw.filter(x => oldMap[x.employee_id]).map(x => {
   const o = oldMap[x.employee_id]
   const d = []
-  if (norm(o.name) !== norm(x.name)) d.push(`ชื่อ: ${o.name} → ${x.name}`)
-  if ((o.department || '') !== x.department) d.push(`ฝ่าย: ${o.department || '-'} → ${x.department}`)
-  if ((o.position || '') !== x.position) d.push(`ตำแหน่ง: ${o.position || '-'} → ${x.position}`)
+  if (norm(o.name) !== norm(x.name) || /^\[ลาออก\]/.test(o.name)) d.push(`ชื่อ: ${o.name} → ${x.name}`)
+  if (normText(o.department) !== normText(x.department)) d.push(`ฝ่าย: ${o.department || '-'} → ${x.department}`)
+  if (normText(o.position) !== normText(x.position)) d.push(`ตำแหน่ง: ${o.position || '-'} → ${x.position}`)
   return d.length ? { id: x.employee_id, diff: d, row: x } : null
 }).filter(Boolean)
 

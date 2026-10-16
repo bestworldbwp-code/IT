@@ -15,6 +15,7 @@ export default function ComputerForm({ computerId, onSaved }) {
     const [data, setData] = useState(initial)
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(false)
+    const [origUser, setOrigUser] = useState(null) // ผู้ใช้ตอนเปิดฟอร์ม — sync ไปทะเบียนหลักเฉพาะเมื่อมีการเปลี่ยน
 
     useEffect(() => {
         async function load() {
@@ -27,7 +28,7 @@ export default function ComputerForm({ computerId, onSaved }) {
             const { data: comp, error } = await client.from('computers').select('*').eq('id', computerId).single()
             setFetching(false)
             if (error) alert(error.message)
-            else setData(comp)
+            else { setData(comp); setOrigUser(comp.user_id || '') }
         }
         load()
     }, [computerId])
@@ -46,7 +47,7 @@ export default function ComputerForm({ computerId, onSaved }) {
         } else {
             res = await client.from('computers').insert(payload)
         }
-        if (!res.error && payload.computer_id) {
+        if (!res.error && payload.computer_id && (payload.user_id || '') !== (origUser ?? '')) {
             // ให้ทะเบียนหลัก (เครื่องและอุปกรณ์ IT) มีผู้ใช้ตรงกัน
             await client.from('assets').update({ owner: payload.user_id || '' }).eq('asset_tag', payload.computer_id)
         }
@@ -63,7 +64,7 @@ export default function ComputerForm({ computerId, onSaved }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
                     <label>รหัสเครื่องจักร (COM-IT-xx) *</label>
-                    <input required value={data.computer_id ?? ''} onChange={(e) => setData({ ...data, computer_id: e.target.value })} placeholder="เช่น COM-IT-65" />
+                    <input required readOnly={!!computerId} title={computerId ? 'เปลี่ยนรหัสเครื่องที่หน้า เครื่องและอุปกรณ์ IT' : undefined} value={data.computer_id ?? ''} onChange={(e) => setData({ ...data, computer_id: e.target.value })} placeholder="เช่น COM-IT-65" />
                 </div>
                 <div>
                     <label>ประเภท</label>

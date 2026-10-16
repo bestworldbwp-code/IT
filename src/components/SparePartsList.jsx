@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 import { textMatch, exportCSV, today } from '../audit/docs.jsx'
 
@@ -20,16 +20,33 @@ export default function SparePartsList({ onEdit, readOnly }) {
     }
     useEffect(() => { load() }, [])
 
-    // ปรับจำนวนทันทีบนหน้าจอแล้วค่อยบันทึก (กด +/- รัว ๆ จะไม่นับหาย)
-    async function updateStock(id, delta) {
+    // ปรับจำนวนบนหน้าจอทันที แล้วบันทึกค่าสุดท้ายครั้งเดียวเมื่อหยุดกด 0.6 วินาที
+    // (เดิมยิงบันทึกทุกครั้งที่กด คำสั่งไปถึงสลับลำดับได้ ฐานข้อมูลจะได้ค่าเก่ากว่าที่เห็น)
+    const timers = useRef({})
+    const pendingQty = useRef({})
+    function updateStock(id, delta) {
         if (readOnly) return
         const item = items.find(i => i.id === id)
         if (!item) return
-        const newQty = Math.max(0, (item.stock_quantity || 0) + delta)
+        const base = pendingQty.current[id] ?? (item.stock_quantity || 0)
+        const newQty = Math.max(0, base + delta)
+        pendingQty.current[id] = newQty
         setItems(list => list.map(i => i.id === id ? { ...i, stock_quantity: newQty } : i))
-        const { error } = await getSupabase().from('spare_parts').update({ stock_quantity: newQty }).eq('id', id)
-        if (error) { alert(error.message); load() }
+        clearTimeout(timers.current[id])
+        timers.current[id] = setTimeout(async () => {
+            const qty = pendingQty.current[id]
+            delete pendingQty.current[id]
+            const { error } = await getSupabase().from('spare_parts').update({ stock_quantity: qty }).eq('id', id)
+            if (error) { alert('บันทึกจำนวนไม่สำเร็จ: ' + error.message); load() }
+        }, 600)
     }
+    // ออกจากหน้าก่อนครบเวลา → บันทึกค่าที่ค้างอยู่ทันที
+    useEffect(() => () => {
+        for (const [id, qty] of Object.entries(pendingQty.current)) {
+            clearTimeout(timers.current[id])
+            getSupabase()?.from('spare_parts').update({ stock_quantity: qty }).eq('id', id).then(() => {})
+        }
+    }, [])
 
     async function deleteItem(id) {
         if (!confirm('ยืนยันการลบรายการนี้?')) return
@@ -60,7 +77,7 @@ export default function SparePartsList({ onEdit, readOnly }) {
                 <button className="secondary" onClick={doExport} disabled={!visible.length}>📥 Export CSV</button>
             </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>

@@ -17,7 +17,7 @@ export default function QrLabelsPage() {
   const [cat, setCat] = useState('all')
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState(new Set())
-  const [qrs, setQrs] = useState({})
+  const [qrs, setQrs] = useState({ url: '', map: {} }) // จำว่า QR ชุดนี้สร้างจาก URL ไหน
   const [settings, setSettings] = useDocSettings()
   const appUrl = normalizeAppUrl(settings.appUrl) // ใช้ค่าจาก state โดยตรง ไม่รอบันทึกลงเครื่อง
 
@@ -48,7 +48,7 @@ export default function QrLabelsPage() {
       for (const a of toPrint) {
         out[a.id] = await QRCode.toDataURL(assetUrl(a.asset_tag, appUrl), { margin: 0, width: 256, errorCorrectionLevel: 'M' })
       }
-      if (alive) setQrs(out)
+      if (alive) setQrs({ url: appUrl, map: out })
     })()
     return () => { alive = false }
   }, [toPrint.map(a => a.id).join(','), appUrl])
@@ -56,12 +56,12 @@ export default function QrLabelsPage() {
   const toggle = (id) => setPicked(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const sz = SIZES[size]
   const isLocal = /localhost|127\.0\.0\.1/.test(appUrl)
-  const ready = toPrint.length > 0 && toPrint.every(a => qrs[a.id]) // QR สร้างครบก่อนถึงจะให้กดพิมพ์
+  const ready = toPrint.length > 0 && qrs.url === appUrl && toPrint.every(a => qrs.map[a.id]) // QR ครบและเป็นของ URL ปัจจุบันก่อนถึงจะให้กดพิมพ์
 
   return (
     <div>
       <div className="card no-print doc-toolbar">
-        <input placeholder="ค้นหา รหัส / รุ่น / ผู้ใช้..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
+        <input placeholder="ค้นหา รหัส / รุ่น / สถานที่..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
         <select value={cat} onChange={e => setCat(e.target.value)} style={{ width: 170 }}>
           <option value="all">ทุกประเภท ({assets.length})</option>
           {cats.map(c => <option key={c} value={c}>{TYPE_TH[c] || c}</option>)}
@@ -110,7 +110,7 @@ export default function QrLabelsPage() {
           <div className="label-sheet" style={{ '--lw': sz.w + 'mm', '--lh': sz.h + 'mm', '--lqr': sz.qr + 'mm', '--lf': sz.font + 'pt' }}>
             {toPrint.map(a => (
               <div key={a.id} className="label">
-                <img src={qrs[a.id]} alt={a.asset_tag} className="label-qr" />
+                <img src={qrs.url === appUrl ? qrs.map[a.id] : undefined} alt={a.asset_tag} className="label-qr" />
                 <div className="label-text">
                   <div className="label-co">{machineName(a.asset_tag)}</div>
                   <div className="label-tag">{a.asset_tag}</div>

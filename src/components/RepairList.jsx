@@ -20,9 +20,11 @@ export default function RepairList({ onNewRepair, readOnly }) {
     const [loading, setLoading] = useState(false)
     const [filter, setFilter] = useState('all')
 
+    const reqRef = useRef(0)
     async function load() {
         const client = getSupabase()
         if (!client) return
+        const req = ++reqRef.current
         setLoading(true)
         let query = client
             .from('repair_requests')
@@ -30,6 +32,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
             .order('created_at', { ascending: false })
         if (filter !== 'all') query = query.eq('status', filter)
         const { data, error } = await query
+        if (req !== reqRef.current) return // มีการโหลดใหม่กว่าแล้ว ทิ้งผลเก่า
         setLoading(false)
         if (error) alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message)
         else setItems(data || [])
@@ -119,7 +122,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
     }
 
     async function deleteItem(id) {
-        if (!confirm('ยืนยันการลบเรื่องแจ้งซ่อมนี้?')) return
+        if (!confirm('ยืนยันการลบเรื่องแจ้งซ่อมนี้?\n(ถ้าปิดงานแล้ว รายการในประวัติเครื่องที่บันทึกไว้จะยังอยู่ — ลบแยกได้ที่หน้าประวัติบำรุงรักษา)')) return
         const client = getSupabase()
         const { error } = await client.from('repair_requests').delete().eq('id', id)
         if (error) alert(error.message)
@@ -154,7 +157,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
             )}
 
             {closing && (
-                <div className="overlay" onClick={() => setClosing(null)}>
+                <div className="overlay" style={{ overflowY: 'auto', padding: '0 12px' }} onClick={() => setClosing(null)}>
                     <form className="card" onClick={e => e.stopPropagation()} onSubmit={submitClose}
                         style={{ maxWidth: 560, margin: '60px auto', padding: 24 }}>
                         <h3 style={{ marginBottom: 4 }}>ปิดงานซ่อม · {closing.assets?.asset_tag || closing.device_name || `#${closing.id}`}</h3>
@@ -186,7 +189,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
                 </div>
             )}
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>

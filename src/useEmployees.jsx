@@ -3,14 +3,15 @@ import { getSupabase } from './supabaseClient.js'
 
 let cache = null
 
-// โหลดทะเบียนพนักงานครั้งเดียว ใช้แปลงรหัสพนักงาน -> ชื่อ (แผนก) ในทุกตาราง
+// โหลดทะเบียนพนักงาน (ใช้ค่าเดิมระหว่างโหลดใหม่) เพื่อแปลงรหัสพนักงาน -> ชื่อ (แผนก) ในทุกตาราง
 export function useEmployees() {
   const [map, setMap] = useState(cache || {})
   useEffect(() => {
     const client = getSupabase()
     if (!client) return
-    client.from('employees').select('employee_id, name, department, position').then(({ data }) => {
-      cache = Object.fromEntries((data || []).map(e => [e.employee_id, e]))
+    client.from('employees').select('employee_id, name, department, position').then(({ data, error }) => {
+      if (error || !data) return // โหลดพลาด: ใช้รายชื่อเดิมต่อ ไม่ล้างทิ้ง
+      cache = Object.fromEntries(data.map(e => [e.employee_id, e]))
       setMap(cache)
     })
   }, [])

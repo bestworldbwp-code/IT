@@ -18,6 +18,8 @@ const blank = () => ({ ...initial, log_date: today() }) // วันที่ต
 export default function MaintenanceForm({ maintenanceId, onSaved }) {
     const [data, setData] = useState(blank)
     const [loading, setLoading] = useState(false)
+    const [fetching, setFetching] = useState(!!maintenanceId)
+    const [loadFailed, setLoadFailed] = useState(false)
     const [assets, setAssets] = useState([])
 
     useEffect(() => {
@@ -36,8 +38,10 @@ export default function MaintenanceForm({ maintenanceId, onSaved }) {
                 return
             }
             const client = getSupabase()
+            setFetching(true); setLoadFailed(false)
             const { data: rec, error } = await client.from('maintenance_logs').select('*').eq('id', maintenanceId).single()
-            if (error) alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message)
+            setFetching(false)
+            if (error) { setLoadFailed(true); alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message) }
             if (rec) setData({
                 asset_id: rec.asset_id ?? '',
                 log_type: rec.log_type ?? 'repair',
@@ -55,6 +59,7 @@ export default function MaintenanceForm({ maintenanceId, onSaved }) {
 
     async function handleSubmit(e) {
         e.preventDefault()
+        if (loadFailed) return alert('โหลดข้อมูลเดิมไม่สำเร็จ — ปิดแล้วเปิดใหม่ก่อนบันทึก (กันบันทึกค่าว่างทับของเดิม)')
         const client = getSupabase()
         setLoading(true)
         const payload = { ...data, next_check_date: data.next_check_date || null, log_date: data.log_date || null, cost: parseFloat(data.cost) || 0 }
@@ -65,6 +70,8 @@ export default function MaintenanceForm({ maintenanceId, onSaved }) {
         if (!error) onSaved()
         else alert(error.message)
     }
+
+    if (fetching) return <div>กำลังโหลด...</div>
 
     return (
         <form onSubmit={handleSubmit}>

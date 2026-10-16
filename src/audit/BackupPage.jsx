@@ -15,7 +15,7 @@ export default function BackupPage() {
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
   const [note, setNote] = useState('')
-  const [storage, setStorage] = useState('เครื่องเจ้าหน้าที่ IT (โฟลเดอร์ backup)')
+  const [storage, setStorage] = useState('โฟลเดอร์ Downloads ของเครื่องนี้')
 
   async function load() {
     const client = getSupabase()
@@ -101,7 +101,8 @@ export default function BackupPage() {
   }
 
   const totalRows = Object.values(counts).reduce((a, b) => a + (Number(b) || 0), 0)
-  const last = history[0]
+  const FULL = ['full_json', 'full_csv', 'auto_file', 'manual']
+  const last = history.find(h => FULL.includes(h.table_name))
   const daysSince = last ? Math.floor((Date.now() - new Date(last.created_at)) / 86400000) : null
 
   return (
@@ -129,7 +130,7 @@ export default function BackupPage() {
           <button className="secondary" disabled={busy} onClick={recordManual}>📝 บันทึกการสำรองที่ทำนอกระบบ</button>
           {progress && <span className="muted">{progress}</span>}
         </div>
-        <div className="muted" style={{ marginTop: 10 }}>ไฟล์ JSON ใช้กู้คืนด้วยสคริปต์ import ได้ · ทุกครั้งที่กดจะบันทึกประวัติลงระบบอัตโนมัติ</div>
+        <div className="muted" style={{ marginTop: 10 }}>ไฟล์ JSON กู้คืนด้วยคำสั่ง npm run restore -- ชื่อไฟล์ (ดู scripts/backup-schedule.md) · ทุกครั้งที่กดจะบันทึกประวัติลงระบบอัตโนมัติ</div>
       </div>
 
       <div className="card no-print" style={{ marginBottom: 16, padding: 0, overflow: 'hidden' }}>

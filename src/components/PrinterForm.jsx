@@ -11,6 +11,7 @@ export default function PrinterForm({ printerId, onSaved }) {
     const [data, setData] = useState(initial)
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(false)
+    const [origUser, setOrigUser] = useState(null) // ผู้ใช้ตอนเปิดฟอร์ม — sync ไปทะเบียนหลักเฉพาะเมื่อมีการเปลี่ยน
 
     useEffect(() => {
         async function load() {
@@ -23,7 +24,7 @@ export default function PrinterForm({ printerId, onSaved }) {
             const { data: prn, error } = await client.from('printers').select('*').eq('id', printerId).single()
             setFetching(false)
             if (error) alert(error.message)
-            else setData(prn)
+            else { setData(prn); setOrigUser(prn.user_id || '') }
         }
         load()
     }, [printerId])
@@ -42,7 +43,7 @@ export default function PrinterForm({ printerId, onSaved }) {
         } else {
             res = await client.from('printers').insert(payload)
         }
-        if (!res.error && payload.printer_id) {
+        if (!res.error && payload.printer_id && (payload.user_id || '') !== (origUser ?? '')) {
             await client.from('assets').update({ owner: payload.user_id || '' }).eq('asset_tag', payload.printer_id)
         }
         setLoading(false)
@@ -58,7 +59,7 @@ export default function PrinterForm({ printerId, onSaved }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
                     <label>รหัสเครื่องจักร (PNT-IT-xx) *</label>
-                    <input required value={data.printer_id ?? ''} onChange={(e) => setData({ ...data, printer_id: e.target.value })} placeholder="เช่น PNT-IT-27" />
+                    <input required readOnly={!!printerId} title={printerId ? 'เปลี่ยนรหัสเครื่องที่หน้า เครื่องและอุปกรณ์ IT' : undefined} value={data.printer_id ?? ''} onChange={(e) => setData({ ...data, printer_id: e.target.value })} placeholder="เช่น PNT-IT-27" />
                 </div>
                 <div>
                     <label>รุ่น (Brand / Model)</label>

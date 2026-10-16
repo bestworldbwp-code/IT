@@ -51,7 +51,7 @@ export default function MaintenanceList({ onEdit, readOnly }) {
                 />
                 <button className="secondary" onClick={doExport} disabled={!visible.length}>📥 Export CSV</button>
             </div>
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
