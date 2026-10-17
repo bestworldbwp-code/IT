@@ -435,3 +435,30 @@ tbody td button { padding: 6px 12px !important; font-size: 0.82rem; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ---------- ใบแจ้งซ่อม FQP-IT-01:03 (ตามไฟล์ Excel ต้นฉบับ) ---------- */
+.rf { width: 190mm; min-width: 190mm; box-sizing: border-box; overflow: visible; font-size: 15px; line-height: 1.9; color: #000; padding: 28px 36px 18px; position: relative; }
+.rf-head { position: relative; text-align: center; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 8px 0 6px; margin-bottom: 10px; }
+.rf-logo { position: absolute; left: 70px; top: 4px; height: 58px; }
+.rf-title { font-size: 20px; font-weight: 700; }
+.rf-company { font-size: 17px; font-weight: 600; }
+.rf-meta { width: 330px; margin-left: auto; }
+.rf-part { font-weight: 700; text-decoration: underline; margin-top: 4px; }
+.rf-label { font-weight: 600; }
+.rf-grid3 { display: grid; grid-template-columns: 90px 1.3fr 1fr 1.6fr; padding-left: 8px; }
+.rf-row { display: flex; align-items: baseline; gap: 4px; }
+.rf-row2 { display: grid; grid-template-columns: 1fr 1fr; }
+.rf-box { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border: 1px solid #000; vertical-align: -2px; margin-right: 4px; font-size: 12px; line-height: 1; }
+.rf-dots { display: inline-block; border-bottom: 1px dotted #000; height: 1.1em; vertical-align: baseline; }
+.rf-fill { display: inline-block; border-bottom: 1px dotted #000; padding: 0 6px; text-align: center; }
+.rf-grow { flex: 1; text-align: left; }
+.rf-line { border-bottom: 1px dotted #000; height: 1.9em; }
+.rf-text { border-bottom: 1px dotted #000; white-space: pre-wrap; min-height: 3.8em; }
+.rf-sig { display: grid; grid-template-columns: 95px 85px 200px 1fr; white-space: nowrap; align-items: end; margin-top: 10px; }
+.rf-sig > span:first-child { grid-column: 2; text-align: right; padding-right: 6px; }
+.rf-sig > span:nth-child(2) { grid-column: 3; }
+.rf-sig > span:nth-child(3) { grid-column: 4; padding-left: 8px; }
+.rf-sigline { border-bottom: 1px dotted #000; text-align: center; min-height: 1.6em; }
+.rf-rule { border-top: 1.5px solid #000; margin: 14px -12px 6px; }
+.rf-code { text-align: right; margin-top: 18px; font-size: 13px; }
+@media print { .rf { box-shadow: none; border: none; } }

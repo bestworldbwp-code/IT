@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
-import { DocHeader, DocToolbar, fmtDate, repairDocNo, monthKey } from './docs.jsx'
+import { DocToolbar, fmtDate, repairDocNo, monthKey } from './docs.jsx'
+import logo from '../assets-bwp-logo.png'
 
 const STATUS = { pending: 'รอรับเรื่อง', in_progress: 'กำลังซ่อม', done: 'ซ่อมเสร็จ' }
 const Chk = ({ on, children }) => <span className="chk">{on ? '☑' : '☐'} {children}</span>
@@ -93,77 +94,101 @@ export default function RepairFormPage() {
   )
 }
 
+
+// ใบแจ้งซ่อม FQP-IT-01:03 — วางตามไฟล์ Excel ต้นฉบับ (เอกสาร/FQP-IT-0103.xlsx) ทุกบรรทัด
+// ช่องที่มีข้อมูลในระบบจะเติมให้ ช่องที่ไม่มีเว้นจุดไว้เขียนมือเหมือนฟอร์มเดิม
+const Box = ({ on }) => <span className="rf-box">{on ? '✓' : ''}</span>
+const Fill = ({ v, w }) => v ? <span className="rf-fill" style={{ minWidth: w }}>{v}</span> : <span className="rf-dots" style={{ minWidth: w }} />
+
+function Sig({ role, name }) {
+  return (
+    <div className="rf-sig">
+      <span>ลงชื่อ</span>
+      <span className="rf-sigline">{name || ''}</span>
+      <span>{role}</span>
+    </div>
+  )
+}
+
 function RepairSheet({ it, docNo }) {
-  const a = it?.assets
   const d = it ? new Date(it.created_at) : null
-  const done = it ? new Date(it.completed_at || 0) : null
   const type = problemType(it)
   const rr = it?.repair_result
-  const thDate = (dt) => dt ? { day: dt.getDate(), month: dt.toLocaleDateString('th-TH', { month: 'long' }), year: dt.getFullYear() + 543, time: dt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) } : {}
-  const td = thDate(d)
+  const th = (dt) => dt ? { day: dt.getDate(), month: dt.toLocaleDateString('th-TH', { month: 'long' }), year: dt.getFullYear() + 543, time: dt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) } : {}
+  const td = th(d)
+  const tm = (v) => v ? th(new Date(v)).time : ''
+  const fixed = rr === 'fixed_no_part' || rr === 'fixed_replaced'
+  const unfixed = rr === 'unfixed_outsource' || rr === 'unfixed_buy_new'
+  const a = it?.assets
   const device = a ? `${a.asset_tag}${a.model ? ` (${a.model})` : ''}` : (it?.device_name || '')
+  const problem = [device && `[${device}]`, it?.problem].filter(Boolean).join(' ')
 
   return (
-    <div className="doc card sheet">
-      <DocHeader title="ใบแจ้งซ่อมคอมพิวเตอร์และอุปกรณ์ IT" code="FQP-IT-01:03"
-        extra={[['No./เลขที่', docNo || '....................']]} />
-
-      <div className="doc-row" style={{ justifyContent: 'space-between' }}>
-        <span>วันที่ <u>&nbsp;{td.day || '........'}&nbsp;</u> เดือน <u>&nbsp;{td.month || '......................'}&nbsp;</u> พ.ศ. <u>&nbsp;{td.year || '...........'}&nbsp;</u></span>
-        <span>เวลา <u>&nbsp;{td.time || '..................'}&nbsp;</u> น.</span>
+    <div className="doc card sheet rf">
+      <div className="rf-head">
+        <img src={logo} alt="BWP" className="rf-logo" />
+        <div className="rf-title">ใบแจ้งซ่อมคอมพิวเตอร์และอุปกรณ์ IT</div>
+        <div className="rf-company">บริษัท เบสท์เวิลด์ อินเตอร์พลาส จำกัด</div>
       </div>
 
-      <div className="doc-part">ส่วนที่ 1 ข้อมูลผู้แจ้ง</div>
-      <div className="doc-row">
+      <div className="rf-meta">
+        <div>No./เลขที่ <Fill v={docNo} w={190} /></div>
+        <div>วันที่<Fill v={td.day} w={40} />เดือน<Fill v={td.month} w={90} />พ.ศ.<Fill v={td.year} w={50} /></div>
+        <div>เวลา <Fill v={td.time} w={200} />น.</div>
+      </div>
+
+      <div className="rf-part">ส่วนที่ 1&nbsp; ข้อมูลผู้แจ้ง</div>
+      <div className="rf-grid3">
         <span>แจ้งปัญหา</span>
-        <Chk on={type === 'computer'}>คอมพิวเตอร์</Chk>
-        <Chk on={type === 'printer'}>เครื่องพิมพ์ (Printer)</Chk>
-        <Chk on={type === 'internet'}>อินเตอร์เน็ต</Chk>
-        <Chk on={type === 'software'}>โปรแกรม</Chk>
-        <Chk on={type === 'other'}>อื่นๆ : {type === 'other' ? '' : <Dots n={30} />}</Chk>
+        <span><Box on={type === 'computer'} /> คอมพิวเตอร์</span>
+        <span><Box on={type === 'internet'} /> อินเตอร์เน็ต</span>
+        <span><Box on={type === 'other'} /> อื่นๆ : <Fill v={type === 'other' ? (it?.device_name || '') : ''} w={150} /></span>
+        <span />
+        <span><Box on={type === 'printer'} /> เครื่องพิมพ์ ( Printer )</span>
+        <span><Box on={type === 'software'} /> โปรแกรม</span>
+        <span />
       </div>
-      <div className="doc-row"><span>เครื่อง / รหัสเครื่องจักร : {device || <Dots n={50} />}</span><span>ผู้แจ้ง : {it?.reporter_name || <Dots n={30} />}</span></div>
-      <div style={{ padding: '4px 4px 0' }}>รายละเอียดปัญหา</div>
-      <div className="doc-lines" style={{ padding: '0 4px' }}>
-        {it ? <div style={{ height: 'auto', minHeight: 52, whiteSpace: 'pre-wrap', borderBottom: 'none' }}>{it.problem}</div> : <><div /><div /></>}
+      <div className="rf-label">รายละเอียดปัญหา</div>
+      {problem
+        ? <div className="rf-text">{problem}</div>
+        : <><div className="rf-line" /><div className="rf-line" /></>}
+
+      <Sig role={`( ผู้แจ้งซ่อม แผนก/หน่วยงาน ${it?.location || '...............'} )`} name={it?.reporter_name} />
+      <Sig role="( หัวหน้าแผนก/ผช.ผจกฝ่าย/ผจก.ฝ่าย )" />
+      <Sig role="( ผู้รับแจ้ง )" name={it?.handled_by} />
+      <div className="rf-rule" />
+
+      <div className="rf-part">ส่วนที่ 2&nbsp; สำหรับเจ้าหน้าที่</div>
+      <div className="rf-label">ผลการซ่อม</div>
+      <div className="rf-row" style={{ paddingLeft: 24 }}><Box on={fixed} /> สามารถแก้ปัญหาได้</div>
+      <div className="rf-row2" style={{ paddingLeft: 48 }}>
+        <span><Box on={rr === 'fixed_no_part'} /> ไม่ต้องเปลี่ยนอุปกรณ์</span>
+        <span><Box on={rr === 'other'} /> อื่นๆ : <Fill v={rr === 'other' ? ' ' : ''} w={170} /></span>
+        <span><Box on={rr === 'fixed_replaced'} /> ต้องเปลี่ยนอุปกรณ์</span>
+        <span>เวลาเริ่ม <Fill v={tm(it?.started_at)} w={60} /> น. จบ. <Fill v={tm(it?.completed_at)} w={60} /> น.</span>
       </div>
-      <div className="sig-grid three" style={{ marginTop: 18 }}>
-        <div className="sig"><div className="sig-line" style={{ height: 30 }} /><div>( ผู้แจ้งซ่อม แผนก/หน่วยงาน {it?.location || '..................'} )</div></div>
-        <div className="sig"><div className="sig-line" style={{ height: 30 }} /><div>( หัวหน้าแผนก/ผช.ผจก.ฝ่าย/ผจก.ฝ่าย )</div></div>
-        <div className="sig"><div className="sig-line" style={{ height: 30 }} /><div>( ผู้รับแจ้ง{it?.handled_by ? ` : ${it.handled_by}` : ''} )</div></div>
+      <div className="rf-row">วิธีการแก้ไข : {fixed || rr === 'other' ? <span className="rf-fill rf-grow">{it?.resolution || ''}</span> : <span className="rf-dots rf-grow" />}</div>
+      <div className="rf-line" />
+
+      <div className="rf-row" style={{ paddingLeft: 24, marginTop: 6 }}><Box on={unfixed} /> ไม่สามารถแก้ปัญหาได้</div>
+      <div className="rf-row2" style={{ paddingLeft: 0 }}>
+        <span>วิธีการดำเนินการต่อ&nbsp;&nbsp; <Box on={rr === 'unfixed_outsource'} /> ส่งซ่อม</span>
+        <span><Box on={false} /> อื่นๆ : <Fill v="" w={170} /></span>
+        <span style={{ paddingLeft: 136 }}><Box on={rr === 'unfixed_buy_new'} /> ซื้อใหม่</span>
+        <span />
+      </div>
+      <div className="rf-row">รายละเอียด : {unfixed ? <span className="rf-fill rf-grow">{it?.resolution || ''}</span> : <span className="rf-dots rf-grow" />}</div>
+      <div className="rf-line" />
+
+      <Sig role="( ผู้ซ่อม )" name={it?.status === 'done' ? it?.handled_by : ''} />
+      <Sig role="( ผู้รับตรวจงาน )" />
+      <div className="rf-sig">
+        <span>วันที่รับคืน</span>
+        <span className="rf-sigline">{it?.returned_at ? fmtDate(it.returned_at) : ''}</span>
+        <span />
       </div>
 
-      <div className="doc-part">ส่วนที่ 2 สำหรับเจ้าหน้าที่</div>
-      <div style={{ padding: '2px 4px' }}><strong>ผลการซ่อม</strong></div>
-      <div className="doc-row" style={{ paddingLeft: 16 }}>
-        <Chk on={rr === 'fixed_no_part' || rr === 'fixed_replaced'}>สามารถแก้ปัญหาได้</Chk>
-        <Chk on={rr === 'fixed_no_part'}>ไม่ต้องเปลี่ยนอุปกรณ์</Chk>
-        <Chk on={rr === 'fixed_replaced'}>ต้องเปลี่ยนอุปกรณ์</Chk>
-        <Chk on={rr === 'other'}>อื่นๆ : <Dots n={30} /></Chk>
-      </div>
-      <div className="doc-row" style={{ paddingLeft: 16 }}>
-        <span>เวลาเริ่ม <u>&nbsp;{it?.started_at ? thDate(new Date(it.started_at)).time : '................'}&nbsp;</u> น. &nbsp; จบ <u>&nbsp;{it?.completed_at ? thDate(done).time : '................'}&nbsp;</u> น.</span>
-        {it?.cost > 0 && <span>ค่าใช้จ่าย {Number(it.cost).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>}
-      </div>
-      <div style={{ padding: '2px 4px 0 16px' }}>วิธีการแก้ไข :</div>
-      <div className="doc-lines" style={{ padding: '0 4px 0 16px' }}>
-        {it?.resolution ? <div style={{ height: 'auto', minHeight: 52, whiteSpace: 'pre-wrap', borderBottom: 'none' }}>{it.resolution}</div> : <><div /><div /></>}
-      </div>
-      <div className="doc-row" style={{ paddingLeft: 16 }}><Chk on={rr === 'unfixed_outsource' || rr === 'unfixed_buy_new'}>ไม่สามารถแก้ปัญหาได้</Chk></div>
-      <div className="doc-row" style={{ paddingLeft: 32 }}>
-        <span>วิธีการดำเนินการต่อ</span>
-        <Chk on={rr === 'unfixed_outsource'}>ส่งซ่อม</Chk>
-        <Chk on={rr === 'unfixed_buy_new'}>ซื้อใหม่</Chk>
-        <Chk on={false}>อื่นๆ : <Dots n={30} /></Chk>
-      </div>
-      <div style={{ padding: '2px 4px 0 32px' }}>รายละเอียด :</div>
-      <div className="doc-lines" style={{ padding: '0 4px 0 32px' }}><div /><div /></div>
-
-      <div className="sig-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', marginTop: 18 }}>
-        <div className="sig"><div className="sig-line" style={{ height: 30 }} /><div>( ผู้ซ่อม{it?.handled_by ? ` : ${it.handled_by}` : ''} )</div></div>
-        <div className="sig"><div className="sig-line" style={{ height: 30 }} /><div>( ผู้รับตรวจงาน )</div></div>
-        <div className="sig" style={{ textAlign: 'left', alignSelf: 'end' }}>วันที่รับคืน <u>&nbsp;{it?.returned_at ? fmtDate(it.returned_at) : it?.completed_at ? fmtDate(it.completed_at) : '........../..................../...........'}&nbsp;</u></div>
-      </div>
+      <div className="rf-code">FQP-IT-01:03</div>
     </div>
   )
 }
