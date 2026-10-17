@@ -110,7 +110,7 @@ function Sig({ role, name }) {
   )
 }
 
-function RepairSheet({ it, docNo }) {
+export function RepairSheet({ it, docNo }) {
   const d = it ? new Date(it.created_at) : null
   const type = problemType(it)
   const rr = it?.repair_result

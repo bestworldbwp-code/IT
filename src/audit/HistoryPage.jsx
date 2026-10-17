@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
+import { RepairSheet } from './RepairFormPage.jsx'
 import { DocHeader, SignatureBlock, DocToolbar, Field, fmtDate, fmtDateTime, machineName, byTag, repairDocNo, guessBrand, textMatch, assetLocation } from './docs.jsx'
 
 const STATUS_TH = { in_use: 'ใช้งาน', stock: 'สำรอง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
@@ -78,7 +79,7 @@ export default function HistoryPage() {
           .filter((e, _, all) => !(e.kind === 'แจ้งซ่อม' && e.done && all.some(x => x.kind === 'บำรุงรักษา' && x.ref === e.ref)))
           .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
         const owner = await ownerInfo(client, asset.data.owner)
-        if (req === reqRef.current) setDetail({ info: { ...asset.data, ownerLabel: owner.label, ownerDept: owner.dept }, events })
+        if (req === reqRef.current) setDetail({ info: { ...asset.data, ownerLabel: owner.label, ownerDept: owner.dept }, events, repairs: (repairs.data || []).map(r => ({ ...r, assets: { asset_tag: asset.data.asset_tag, model: asset.data.model } })) })
       } else {
         const x = d.raw
         const owner = await ownerInfo(client, x.user_id)
@@ -91,6 +92,7 @@ export default function HistoryPage() {
     }
   }
 
+  const [showForms, setShowForms] = useState(true)
   const totalCost = detail?.events.reduce((s, e) => s + (parseFloat(e.cost) || 0), 0) || 0
 
   return (
@@ -146,7 +148,9 @@ export default function HistoryPage() {
                           <td>{e.date ? fmtDate(e.date) : '-'}</td>
                           <td><div style={{ fontWeight: 600 }}>[{e.kind}] {e.title}</div><div style={{ whiteSpace: 'pre-wrap' }}>{e.detail}</div></td>
                           <td>{e.by || ''}</td>
-                          <td>{e.ref || ''}</td>
+                          <td>{e.ref?.startsWith('ใบแจ้งซ่อม No. ') && showForms && detail.repairs?.length
+                            ? <a href="#" onClick={ev => { ev.preventDefault(); document.getElementById('rf-' + e.ref.slice(14))?.scrollIntoView({ behavior: 'smooth' }) }}>{e.ref}</a>
+                            : (e.ref || '')}</td>
                           <td>{[e.remarks, e.cost ? `ค่าใช้จ่าย ${Number(e.cost).toLocaleString('th-TH')} บาท` : '', e.next ? `ตรวจครั้งถัดไป ${fmtDate(e.next)}` : ''].filter(Boolean).join(' · ')}</td>
                         </tr>
                       ))}
@@ -161,6 +165,20 @@ export default function HistoryPage() {
                 </>
               )}
             </div>
+          )}
+          {/* ใบแจ้งซ่อม (FQP-IT-01:03) ของเครื่องนี้ — พิมพ์ต่อท้ายประวัติได้เลย */}
+          {selected && detail?.repairs?.length > 0 && (
+            <>
+              <div className="card no-print" style={{ margin: '16px 0 0', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                <strong>📝 ใบแจ้งซ่อมของเครื่องนี้ {detail.repairs.length} ใบ</strong>
+                <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ width: 16 }} checked={showForms} onChange={e => setShowForms(e.target.checked)} /> แสดงและพิมพ์ต่อท้ายประวัติ
+                </label>
+              </div>
+              {showForms && detail.repairs.map(r => (
+                <div key={r.id} id={'rf-' + repairDocNo(r)} style={{ marginTop: 16 }}><RepairSheet it={r} docNo={repairDocNo(r)} /></div>
+              ))}
+            </>
           )}
         </div>
       </div>
