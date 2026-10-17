@@ -56,8 +56,10 @@ Write-Host '  IT Asset - Collect computer info / เก็บข้อมูล�
 Write-Host '  Read-only: nothing on this PC is changed / อ่านอย่างเดียว ไม่แก้ไขเครื่อง' -ForegroundColor DarkGray
 Write-Host ''
 while ($true) {
-  if (-not $Tag) { $Tag = Read-Host 'Machine code on the sticker, e.g. COM-IT-05 / รหัสเครื่องบนสติกเกอร์' }
-  $Tag = ((("$Tag" -replace '\s', '').ToUpper()) -replace '^PT-', 'PNT-') -replace '-(\d)$', '-0$1'
+  if (-not $Tag) { $Tag = Read-Host 'Machine number, e.g. 47 (= COM-IT-47) / เลขเครื่องบนสติกเกอร์ เช่น 47' }
+  $Tag = ("$Tag" -replace '\s', '').ToUpper()
+  if ($Tag -match '^\d{1,3}$') { $Tag = 'COM-IT-' + $Tag }   # พิมพ์แค่เลข = คอมพิวเตอร์ (โปรแกรมนี้รันบนคอมเท่านั้น)
+  $Tag = ($Tag -replace '^PT-', 'PNT-') -replace '-(\d)$', '-0$1'
   if ($Tag -match '^[A-Z]{2,4}-[A-Z]{2,4}-\d{2,3}$') { break }
   Write-Host '  Wrong format, use e.g. COM-IT-05 / รูปแบบไม่ถูก ต้องเป็นแบบ COM-IT-05' -ForegroundColor Yellow
   if ($NoPause) { exit 1 }
