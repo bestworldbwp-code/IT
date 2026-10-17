@@ -26,6 +26,7 @@ import RepairFormPage from './audit/RepairFormPage.jsx'
 import BackupPage from './audit/BackupPage.jsx'
 import QrLabelsPage from './audit/QrLabelsPage.jsx'
 import SurveyPage from './audit/SurveyPage.jsx'
+import InventoryImportPage from './audit/InventoryImportPage.jsx'
 import { isEnvReady, getSupabase } from './supabaseClient.js'
 import { useAdminAuth, LoginScreen } from './auth.jsx'
 
@@ -93,6 +94,7 @@ const PAGES = {
   repair_form: { label: 'ใบแจ้งซ่อม', icon: '📝', title: 'ใบแจ้งซ่อมคอมพิวเตอร์และอุปกรณ์ IT', desc: 'FQP-IT-01:03 พิมพ์จากรายการแจ้งซ่อมในระบบ หรือฟอร์มเปล่า', List: () => <RepairFormPage /> },
   survey: { label: 'สำรวจเครื่อง', icon: '📋', title: 'สำรวจเครื่องคอมพิวเตอร์และอุปกรณ์', desc: 'เดินตรวจว่าเครื่องอยู่กับใคร ที่ไหน แล้วอัปเดตทะเบียน FQP-IT-01:01 ทันที', List: () => <SurveyPage /> },
   qr_labels: { label: 'ป้าย QR ติดเครื่อง', icon: '🏷️', title: 'พิมพ์ป้าย QR ติดเครื่อง', desc: 'แบบฟอร์มสติกเกอร์ชี้บ่งเครื่อง (ข้อ 5.1) พร้อม QR สแกนแจ้งซ่อม', List: () => <QrLabelsPage /> },
+  inventory: { label: 'นำเข้าข้อมูลเครื่อง (USB)', icon: '🔌', title: 'นำเข้าข้อมูลเครื่องจาก USB', desc: 'เติม S/N, CPU, RAM, Disk ในทะเบียน จากไฟล์ที่เก็บด้วยโปรแกรมบน USB', List: () => <InventoryImportPage /> },
   backup: { label: 'สำรองข้อมูล', icon: '💾', title: 'สำรองข้อมูล (Backup)', desc: 'ดาวน์โหลดไฟล์สำรองข้อมูลระบบ และบันทึกว่าสำรองเมื่อไหร่', List: () => <BackupPage /> },
 }
 
@@ -102,7 +104,7 @@ const NAV_GROUPS = [
   { title: 'ทรัพย์สิน', items: ['assets', 'computers', 'printers', 'spare_parts', 'qr_labels'] },
   { title: 'ข้อมูลอ้างอิง', items: ['employees', 'software'] },
   { title: 'เอกสารออดิท (QP-IT-01)', items: ['procedures', 'register', 'history', 'repair_form'] },
-  { title: 'เครื่องมือ', items: ['backup'] },
+  { title: 'เครื่องมือ', items: ['inventory', 'backup'] },
 ]
 
 const tabFromHash = () => {

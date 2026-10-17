@@ -9,3 +9,4 @@ backup/
 
 # ข้อมูลนำเข้า (มีชื่อพนักงาน) — ไม่เก็บใน git
 migrations/*.json
+usb-inventory/data/
