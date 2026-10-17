@@ -150,10 +150,7 @@ $w = netsh wlan show interfaces 2>$null | Select-String '^\s*SSID\s*:\s*(.+)$' |
 if ($w) { $ssid = $w.Matches[0].Groups[1].Value.Trim() }
 $mapped = @(Get-CimInstance Win32_MappedLogicalDisk | ForEach-Object { '{0} {1}' -f $_.Name, $_.ProviderName })
 
-# ---------- เครื่องพิมพ์ที่ติดตั้งในเครื่องนี้ (ไม่นับเครื่องพิมพ์เสมือน) ----------
-$printers = @(Get-CimInstance Win32_Printer | Where-Object { $_.Name -notmatch 'pdf|xps|onenote|fax|send to|anydesk|snagit|adobe' } | ForEach-Object {
-  [ordered]@{ name = Clean $_.Name; driver = Clean $_.DriverName; port = Clean $_.PortName; default = [bool]$_.Default; network = [bool]$_.Network; shared = [bool]$_.Shared }
-})
+# ไม่เก็บเครื่องพิมพ์: ทุกเครื่องเพิ่มเครื่องพิมพ์ผ่าน IP เหมือนกันหมด ไม่ได้บอกว่าเครื่องพิมพ์อยู่ที่เครื่องไหน
 
 # ---------- โปรแกรมที่ติดตั้ง (อ่านจาก registry — ไม่ใช้ Win32_Product เพราะไปกระตุ้นให้ตัวติดตั้งซ่อมตัวเอง) ----------
 $seen = @{}
@@ -229,7 +226,6 @@ $rec = [ordered]@{
   ip             = (@($nics | ForEach-Object { $_.ip } | Where-Object { $_ }) -join ', ')
   mac            = (@($nics | ForEach-Object { $_.mac } | Where-Object { $_ }) -join ', ')
   monitors       = (@($monitors | ForEach-Object { ('{0} {1}' -f $_.maker, $_.model).Trim() } | Where-Object { $_ }) -join ' | ')
-  printers       = (@($printers | ForEach-Object { $_.name }) -join ' | ')
   details        = [ordered]@{
     system   = [ordered]@{ manufacturer = $maker; model = $model; board = $board; board_serial = Real $bb.SerialNumber; bios = ('{0} {1}' -f (Clean $bios.SMBIOSBIOSVersion), (D $bios.ReleaseDate 'yyyy-MM-dd')).Trim(); uuid = "$($csp.UUID)"; chassis = $ct -join ',' }
     cpu      = [ordered]@{ name = Clean $cpu.Name; cores = $cpu.NumberOfCores; threads = $cpu.NumberOfLogicalProcessors; max_mhz = $cpu.MaxClockSpeed }
@@ -239,7 +235,6 @@ $rec = [ordered]@{
     gpus     = $gpus
     monitors = $monitors
     network  = [ordered]@{ adapters = $nics; all_macs = $allMacs; wifi_ssid = $ssid; mapped_drives = $mapped }
-    printers = $printers
     windows  = [ordered]@{ name = $osName; build = ('{0}.{1}' -f $os.Version, $cv.UBR); arch = "$($os.OSArchitecture)"; installed = D $os.InstallDate 'yyyy-MM-dd'; last_boot = D $os.LastBootUpTime 'yyyy-MM-dd HH:mm'; activated = $activated; last_update = $lastUpdate }
     users    = [ordered]@{ logged_in = Clean $cs.UserName; profiles = $profiles; local_accounts = $localUsers; administrators = $admins }
     security = $security
@@ -279,7 +274,7 @@ try {
     @{n = 'ผู้ใช้ที่ล็อกอิน'; e = { $_.logged_in_user } }, @{n = 'ประเภท'; e = { $_.type } }, @{n = 'ยี่ห้อ/รุ่น'; e = { $_.brand_model } }, @{n = 'S/N'; e = { $_.serial } },
     @{n = 'CPU'; e = { $_.cpu } }, @{n = 'RAM'; e = { $_.ram } }, @{n = 'Disk'; e = { $_.storage } }, @{n = 'Windows'; e = { $_.os } }, @{n = 'Windows แท้'; e = { $_.activated } },
     @{n = 'อัปเดตล่าสุด'; e = { $_.last_update } }, @{n = 'Office'; e = { $_.office } }, @{n = 'Antivirus'; e = { $_.antivirus } }, @{n = 'IP'; e = { $_.ip } },
-    @{n = 'MAC'; e = { $_.mac } }, @{n = 'จอ'; e = { $_.monitors } }, @{n = 'เครื่องพิมพ์'; e = { $_.printers } } |
+    @{n = 'MAC'; e = { $_.mac } }, @{n = 'จอ'; e = { $_.monitors } } |
     Export-Csv (Join-Path $OutDir 'inventory.csv') -NoTypeInformation -Encoding UTF8 -ErrorAction Stop
   @($all | ForEach-Object {
     $t = $_.asset_tag; $c = $_.computer_name
@@ -294,7 +289,7 @@ Write-Host ("  PC name : {0}    User : {1}" -f $rec.computer_name, $rec.logged_i
 Write-Host ("  Model   : {0}    S/N : {1}" -f $rec.brand_model, $rec.serial)
 Write-Host ("  CPU/RAM : {0} / {1}    Disk : {2}" -f $rec.cpu, $rec.ram, $rec.storage)
 Write-Host ("  Windows : {0}  {1}" -f $rec.os, $rec.activated)
-Write-Host ("  Apps    : {0} programs    Printers : {1}" -f $apps.Count, $rec.printers)
+Write-Host ("  Apps    : {0} programs" -f $apps.Count)
 if (-not $csvOk) { Write-Host '  ! Close inventory.csv / software.csv in Excel, then run again / ปิดไฟล์ CSV ใน Excel แล้วรันใหม่' -ForegroundColor Yellow }
 Write-Host ("  USB now has {0} computers / ใน USB มีข้อมูลแล้ว {0} เครื่อง" -f $all.Count) -ForegroundColor Cyan
 Finish ''
