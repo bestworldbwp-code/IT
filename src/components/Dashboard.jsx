@@ -91,96 +91,98 @@ export default function Dashboard({ onNavigate }) {
 
     const v = (k) => stats ? stats[k] : <span className="skeleton" />
 
-    const cards = [
-        { key: 'assets', label: 'เครื่องและอุปกรณ์ IT', icon: '📦', color: '#4f46e5', tab: 'assets' },
-        { key: 'computers', label: 'คอมพิวเตอร์ (ข้อมูลเดิม)', icon: '💻', color: '#0891b2', tab: 'computers' },
-        { key: 'pendingRepairs', label: 'งานซ่อมค้าง', icon: '🛎️', color: '#dc2626', tab: 'repairs' },
-        { key: 'loans', label: 'กำลังถูกยืม', icon: '🔄', color: '#d97706', tab: 'loans' },
-        { key: 'software', label: 'ซอฟต์แวร์/ลิขสิทธิ์', icon: '💿', color: '#7c3aed', tab: 'software' },
-    ]
-
     const alerts = stats ? [
-        { n: stats.leaverAssets, label: 'เครื่องที่ผู้ถือครองลาออกแล้ว (ไปสำรวจ)', icon: '🚪', tab: 'survey' },
-        { n: stats.unknownOwners, label: 'ผู้ใช้ไม่ตรงกับทะเบียนพนักงาน (ไปแก้ในหน้าสำรวจ)', icon: '❔', tab: 'survey' },
-        { n: stats.pendingRepairs, label: 'งานแจ้งซ่อมที่ยังไม่ปิด', icon: '🛎️', tab: 'repairs' },
-        { n: stats.overdueLoans, label: 'ยืมเกินกำหนดคืน', icon: '⏰', tab: 'loans' },
-        { n: stats.expiredLicenses, label: 'ลิขสิทธิ์หมดอายุแล้ว', icon: '📄', tab: 'software' },
+        { n: stats.pendingRepairs, label: 'งานแจ้งซ่อมที่ยังไม่ปิด', icon: '🛎️', color: '#ff3b30', tab: 'repairs' },
+        { n: stats.leaverAssets, label: 'เครื่องที่ผู้ถือครองลาออกแล้ว', icon: '🚪', color: '#ff9500', tab: 'survey' },
+        { n: stats.unknownOwners, label: 'ผู้ใช้ไม่ตรงกับทะเบียนพนักงาน', icon: '❔', color: '#ff9500', tab: 'survey' },
+        { n: stats.overdueLoans, label: 'ยืมเกินกำหนดคืน', icon: '⏰', color: '#ff3b30', tab: 'loans' },
+        { n: stats.expiredLicenses, label: 'ลิขสิทธิ์หมดอายุแล้ว', icon: '📄', color: '#af52de', tab: 'software' },
     ].filter(a => a.n > 0) : []
+    const todo = alerts.reduce((s, a) => s + a.n, 0)
+
+    const widgets = [
+        { label: 'เครื่องทั้งหมด', value: v('assets'), sub: 'ในทะเบียน FQP-IT-01:01', color: '#007aff', icon: '🖥️', tab: 'assets' },
+        { label: 'งานซ่อมค้าง', value: v('pendingRepairs'), sub: 'รอรับเรื่อง / กำลังซ่อม', color: '#ff3b30', icon: '🛎️', tab: 'repairs' },
+        { label: 'กำลังถูกยืม', value: v('loans'), sub: 'ยังไม่คืน', color: '#ff9500', icon: '🔄', tab: 'loans' },
+        { label: 'ต้องจัดการ', value: stats ? todo : v('x'), sub: !stats ? 'กำลังตรวจสอบ...' : todo ? 'ดูรายการด้านล่าง' : 'เรียบร้อยทั้งหมด', color: !stats || todo ? '#af52de' : '#34c759', icon: !stats || todo ? '📌' : '✅' },
+    ]
+    const hour = new Date().getHours()
+    const greet = hour < 12 ? 'สวัสดีตอนเช้า' : hour < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น'
 
     return (
-        <div>
+        <div className="home">
             {loadError && (
-                <div className="card" style={{ marginBottom: 16, background: '#fef2f2', borderColor: '#fecaca', color: '#991b1b', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="card" style={{ marginBottom: 16, background: '#fff1f0', color: '#c0392b', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span>⚠️ เชื่อมต่อฐานข้อมูลไม่ได้: {loadError}</span>
                     <button className="secondary" style={{ marginLeft: 'auto' }} onClick={loadStats}>ลองใหม่</button>
                 </div>
             )}
-            <div className="stat-grid">
-                {cards.map(c => (
-                    <button key={c.key} className="stat" onClick={() => onNavigate(c.tab)}>
-                        <div className="stat-icon" style={{ background: c.color + '18', color: c.color }}>{c.icon}</div>
-                        <div>
-                            <div className="stat-label">{c.label}</div>
-                            <div className="stat-value">{v(c.key)}</div>
-                        </div>
-                    </button>
-                ))}
+
+            <div className="home-hello">
+                <div>
+                    <div className="home-greet">{greet} 👋</div>
+                    <div className="muted">{new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                </div>
+                <button className="primary home-cta" onClick={() => onNavigate('repairs', true)}>＋ แจ้งซ่อม</button>
             </div>
 
-            <div className="card" style={{ marginBottom: 16 }}>
-                <h3 className="section-title" style={{ marginBottom: 0 }}>ศูนย์ควบคุม</h3>
-                {HUB.map(g => (
-                    <div key={g.title}>
-                        <div className="hub-group">{g.title}</div>
-                        <div className="hub">
-                            {g.items.map(([tab, icon, label, desc, add]) => (
-                                <button key={label} onClick={() => onNavigate(tab, add)}>
-                                    <span className="hub-icon">{icon}</span>
-                                    <span className="hub-label">{label}</span>
-                                    <span className="hub-desc">{desc}</span>
-                                </button>
-                            ))}
+            <div className="widgets">
+                {widgets.map(w => (
+                    <button key={w.label} className="widget" onClick={() => w.tab && onNavigate(w.tab)} disabled={!w.tab}>
+                        <div className="widget-top">
+                            <span className="widget-icon" style={{ background: w.color }}>{w.icon}</span>
+                            <span className="widget-label">{w.label}</span>
                         </div>
-                    </div>
+                        <div className="widget-value" style={{ color: w.color }}>{w.value}</div>
+                        <div className="widget-sub">{w.sub}</div>
+                    </button>
                 ))}
             </div>
 
             <div className="dash-grid">
                 <div className="card">
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                    <div className="card-head">
                         <h3 className="section-title" style={{ margin: 0 }}>แจ้งซ่อมล่าสุด</h3>
-                        <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => onNavigate('repairs')}>ดูทั้งหมด →</button>
+                        <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => onNavigate('repairs')}>ดูทั้งหมด</button>
                     </div>
-                    {recentRepairs.length === 0 && <div className="muted" style={{ padding: '20px 0' }}>{stats ? 'ยังไม่มีเรื่องแจ้งซ่อม' : 'กำลังโหลด...'}</div>}
+                    {recentRepairs.length === 0 && <div className="empty">{stats ? '🎉 ยังไม่มีเรื่องแจ้งซ่อม' : 'กำลังโหลด...'}</div>}
                     {recentRepairs.map(r => {
                         const st = REPAIR_STATUS[r.status] || REPAIR_STATUS.pending
                         return (
-                            <div key={r.id} className="list-row">
+                            <button key={r.id} className="ios-row" onClick={() => onNavigate('repairs')}>
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                     <div style={{ fontWeight: 600 }}>{r.assets?.asset_tag || r.device_name || 'ไม่ระบุอุปกรณ์'}</div>
-                                    <div className="muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {r.problem} · {r.reporter_name || '-'}
-                                    </div>
+                                    <div className="muted ellipsis">{r.problem} · {r.reporter_name || '-'}</div>
                                 </div>
                                 <span className="badge" style={st.style}>{st.label}</span>
-                            </div>
+                                <span className="chev">›</span>
+                            </button>
                         )
                     })}
                 </div>
 
                 <div className="card">
-                    <h3 className="section-title">ต้องจัดการ</h3>
-                    {!stats && <div className="muted">กำลังตรวจสอบ...</div>}
-                    {stats && !loadError && alerts.length === 0 && (
-                        <div style={{ background: '#f0fdf4', color: '#15803d', padding: 14, borderRadius: 10 }}>
-                            ✅ ทุกอย่างเรียบร้อย ไม่มีรายการที่ต้องจัดการ
-                        </div>
-                    )}
+                    <div className="card-head"><h3 className="section-title" style={{ margin: 0 }}>ต้องจัดการ</h3></div>
+                    {!stats && <div className="empty">กำลังตรวจสอบ...</div>}
+                    {stats && !loadError && alerts.length === 0 && <div className="empty">✅ ทุกอย่างเรียบร้อย</div>}
                     {alerts.map(a => (
-                        <button key={a.label} className="alert-row" onClick={() => onNavigate(a.tab)}>
-                            <span>{a.icon}</span>
-                            <span>{a.label}</span>
-                            <span className="n" style={{ color: 'var(--danger)' }}>{a.n}</span>
+                        <button key={a.label} className="ios-row" onClick={() => onNavigate(a.tab)}>
+                            <span className="widget-icon sm" style={{ background: a.color }}>{a.icon}</span>
+                            <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+                            <span className="count" style={{ background: a.color }}>{a.n}</span>
+                            <span className="chev">›</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="card">
+                <div className="card-head"><h3 className="section-title" style={{ margin: 0 }}>เมนูทั้งหมด</h3></div>
+                <div className="apps">
+                    {HUB.flatMap(g => g.items).filter(([, , label]) => !label.startsWith('แจ้งซ่อมแทน')).map(([tab, icon, label, desc, add], i) => (
+                        <button key={label} className="app-tile" onClick={() => onNavigate(tab, add)} title={desc}>
+                            <span className="app-icon" style={{ background: APP_COLORS[i % APP_COLORS.length] }}>{icon}</span>
+                            <span className="app-label">{label}</span>
                         </button>
                     ))}
                 </div>
@@ -188,3 +190,5 @@ export default function Dashboard({ onNavigate }) {
         </div>
     )
 }
+
+const APP_COLORS = ['#007aff', '#ff9500', '#34c759', '#5856d6', '#ff2d55', '#5ac8fa', '#af52de', '#ffcc00', '#30b0c7', '#ff3b30', '#64d2ff', '#a2845e']
