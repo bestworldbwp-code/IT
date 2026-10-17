@@ -98,7 +98,9 @@ export default function HistoryPage() {
     }
   }
 
-  const [showForms, setShowForms] = useState(true)
+  const [openForms, setOpenForms] = useState(() => new Set()) // ใบแจ้งซ่อมที่กดขยายไว้ (พิมพ์เฉพาะใบที่ขยาย)
+  const toggleForm = (no, force) => setOpenForms(s => { const n = new Set(s); (force ?? !n.has(no)) ? n.add(no) : n.delete(no); return n })
+  const openForm = (no) => { toggleForm(no, true); setTimeout(() => document.getElementById('rf-' + no)?.scrollIntoView({ behavior: 'smooth' }), 50) }
   const totalCost = detail?.events.reduce((s, e) => s + (parseFloat(e.cost) || 0), 0) || 0
 
   return (
@@ -154,8 +156,8 @@ export default function HistoryPage() {
                           <td>{e.date ? fmtDate(e.date) : '-'}</td>
                           <td><div style={{ fontWeight: 600 }}>[{e.kind}] {e.title}</div><div style={{ whiteSpace: 'pre-wrap' }}>{e.detail}</div></td>
                           <td>{e.by || ''}</td>
-                          <td>{e.ref?.startsWith('ใบแจ้งซ่อม No. ') && showForms && detail.repairs?.length
-                            ? <a href="#" onClick={ev => { ev.preventDefault(); document.getElementById('rf-' + e.ref.slice(14))?.scrollIntoView({ behavior: 'smooth' }) }}>{e.ref}</a>
+                          <td>{e.ref?.startsWith('ใบแจ้งซ่อม No. ') && detail.repairs?.some(r => repairDocNo(r) === e.ref.slice(14))
+                            ? <a href="#" onClick={ev => { ev.preventDefault(); openForm(e.ref.slice(14)) }}>{e.ref}</a>
                             : (e.ref || '')}</td>
                           <td>{[e.remarks, e.cost ? `ค่าใช้จ่าย ${Number(e.cost).toLocaleString('th-TH')} บาท` : '', e.next ? `ตรวจครั้งถัดไป ${fmtDate(e.next)}` : ''].filter(Boolean).join(' · ')}</td>
                         </tr>
@@ -172,19 +174,33 @@ export default function HistoryPage() {
               )}
             </div>
           )}
-          {/* ใบแจ้งซ่อม (FQP-IT-01:03) ของเครื่องนี้ — พิมพ์ต่อท้ายประวัติได้เลย */}
+          {/* ใบแจ้งซ่อม (FQP-IT-01:03) ของเครื่องนี้ — แยกแถบละครั้ง กดขยายดูใบ (ใบที่ขยายไว้จะพิมพ์ต่อท้ายประวัติ) */}
           {selected && detail?.repairs?.length > 0 && (
-            <>
-              <div className="card no-print" style={{ margin: '16px 0 0', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ marginTop: 16 }}>
+              <div className="card no-print" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
                 <strong>📝 ใบแจ้งซ่อมของเครื่องนี้ {detail.repairs.length} ใบ</strong>
-                <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto', cursor: 'pointer' }}>
-                  <input type="checkbox" style={{ width: 16 }} checked={showForms} onChange={e => setShowForms(e.target.checked)} /> แสดงและพิมพ์ต่อท้ายประวัติ
-                </label>
+                <span className="muted" style={{ fontSize: '0.85rem' }}>กดแถบเพื่อดูใบ · ใบที่เปิดอยู่จะพิมพ์ไปด้วย</span>
+                <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => setOpenForms(new Set(detail.repairs.map(r => repairDocNo(r))))}>ขยายทั้งหมด</button>
+                <button className="ghost" onClick={() => setOpenForms(new Set())}>ย่อทั้งหมด</button>
               </div>
-              {showForms && detail.repairs.map(r => (
-                <div key={r.id} id={'rf-' + repairDocNo(r)} style={{ marginTop: 16 }}><RepairSheet it={r} docNo={repairDocNo(r)} /></div>
-              ))}
-            </>
+              {detail.repairs.map(r => {
+                const no = repairDocNo(r)
+                const open = openForms.has(no)
+                const st = REPAIR_ST[r.status] || r.status
+                return (
+                  <div key={r.id} id={'rf-' + no} style={{ marginBottom: 8 }}>
+                    <button className={'rf-bar no-print' + (open ? ' on' : '')} onClick={() => toggleForm(no)}>
+                      <span className="rf-bar-arrow">{open ? '▾' : '▸'}</span>
+                      <strong>No. {no}</strong>
+                      <span className="muted">{fmtDate(r.created_at)}</span>
+                      <span className="rf-bar-problem">{r.problem}</span>
+                      <span className="badge" style={{ background: r.status === 'done' ? '#dcfce7' : '#fef3c7', color: r.status === 'done' ? '#15803d' : '#b45309' }}>{st}</span>
+                    </button>
+                    {open && <div style={{ marginTop: 8 }}><RepairSheet it={r} docNo={no} /></div>}
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       </div>
