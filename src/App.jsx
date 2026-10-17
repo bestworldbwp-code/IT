@@ -101,7 +101,7 @@ const PAGES = {
 const NAV_GROUPS = [
   { title: null, items: ['home'] },
   { title: 'งานบริการ', items: ['repairs', 'loans', 'maintenance', 'survey'] },
-  { title: 'ทรัพย์สิน', items: ['assets', 'computers', 'printers', 'spare_parts', 'qr_labels'] },
+  { title: 'ทรัพย์สิน', items: ['assets', 'computers', 'printers', 'qr_labels'] },
   { title: 'ข้อมูลอ้างอิง', items: ['employees', 'software'] },
   { title: 'เอกสารออดิท (QP-IT-01)', items: ['procedures', 'register', 'history', 'repair_form'] },
   { title: 'เครื่องมือ', items: ['inventory', 'backup'] },

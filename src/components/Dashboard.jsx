@@ -68,7 +68,6 @@ export default function Dashboard({ onNavigate }) {
         { key: 'pendingRepairs', label: 'งานซ่อมค้าง', icon: '🛎️', color: '#dc2626', tab: 'repairs' },
         { key: 'loans', label: 'กำลังถูกยืม', icon: '🔄', color: '#d97706', tab: 'loans' },
         { key: 'software', label: 'ซอฟต์แวร์/ลิขสิทธิ์', icon: '💿', color: '#7c3aed', tab: 'software' },
-        { key: 'spare', label: 'รายการอะไหล่', icon: '🧰', color: '#db2777', tab: 'spare_parts' },
     ]
 
     const alerts = stats ? [
@@ -77,7 +76,6 @@ export default function Dashboard({ onNavigate }) {
         { n: stats.pendingRepairs, label: 'งานแจ้งซ่อมที่ยังไม่ปิด', icon: '🛎️', tab: 'repairs' },
         { n: stats.overdueLoans, label: 'ยืมเกินกำหนดคืน', icon: '⏰', tab: 'loans' },
         { n: stats.expiredLicenses, label: 'ลิขสิทธิ์หมดอายุแล้ว', icon: '📄', tab: 'software' },
-        { n: stats.lowStock, label: 'อะไหล่ใกล้หมดสต๊อก', icon: '📉', tab: 'spare_parts' },
     ].filter(a => a.n > 0) : []
 
     return (
