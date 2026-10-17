@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { getSupabase } from '../supabaseClient.js'
 import { useEmployees, EmployeeName } from '../useEmployees.jsx'
-import { assetUrl, machineName, byTag, tagType, textMatch, exportCSV, today } from '../audit/docs.jsx'
+import { assetUrl, machineName, byTag, tagType, textMatch, exportCSV, today, TagLink } from '../audit/docs.jsx'
 
 const STATUS_TH = { in_use: 'ใช้งาน', stock: 'สำรอง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
 const TYPES = { COM: 'คอมพิวเตอร์', NB: 'โน้ตบุ๊ก', PNT: 'เครื่องพิมพ์', SRV: 'เซิร์ฟเวอร์', NET: 'เครือข่าย' }
@@ -138,7 +138,7 @@ export default function AssetList({ onEdit, readOnly }) {
             {visible.map((it) => (
               <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
                 <td style={{ padding: '10px 16px' }}>
-                  <div style={{ fontWeight: 600, color: 'var(--primary)' }}>{it.asset_tag}</div>
+                  <div><TagLink tag={it.asset_tag} /></div>
                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{machineName(it.asset_tag)}{it.serial ? ` · S/N ${it.serial}` : ''}</div>
                 </td>
                 <td style={{ padding: '10px 16px' }}>

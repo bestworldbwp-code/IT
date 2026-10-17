@@ -220,3 +220,18 @@ export const typeThai = (tag, category) => {
   const p = String(tag || '').split('-')[0].toUpperCase()
   return p === 'PNT' || p === 'PT' || /printer/i.test(category) ? 'ปริ้นเตอร์' : p === 'NB' ? 'โน้ตบุ๊ก' : 'คอมพิวเตอร์'
 }
+
+// เปิดหน้าประวัติเครื่อง (FQP-IT-01:02 + ใบแจ้งซ่อม) ของเครื่องนี้ — ใช้กับรหัสเครื่องที่กดได้ในทุกหน้า
+export function openHistory(tag) {
+  if (!tag) return
+  try { sessionStorage.setItem('open_history_tag', tag) } catch { /* ignore */ }
+  if (window.location.hash === '#history') window.location.reload()
+  else window.location.hash = '#history'
+}
+export function TagLink({ tag, style }) {
+  if (!tag) return <span>-</span>
+  return (
+    <a href="#history" title="ดูประวัติการซ่อมของเครื่องนี้" style={{ fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', ...style }}
+      onClick={e => { e.preventDefault(); openHistory(tag) }}>{tag} <span style={{ fontSize: '0.75em' }}>🗂️</span></a>
+  )
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
-import { today, repairDocNo, fmtDate, fmtDateTime } from '../audit/docs.jsx'
+import { today, repairDocNo, fmtDate, fmtDateTime, TagLink } from '../audit/docs.jsx'
 
 const STATUS_META = {
     pending: { label: 'รอรับเรื่อง', bg: '#fee2e2', color: '#b91c1c' },
@@ -207,7 +207,7 @@ export default function RepairList({ onNewRepair, readOnly }) {
                             return (
                                 <tr key={it.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                     <td style={{ padding: '10px 16px' }}>
-                                        <div style={{ fontWeight: 600 }}>{it.assets?.asset_tag || it.device_name || '-'}</div>
+                                        <div style={{ fontWeight: 600 }}>{it.assets?.asset_tag ? <TagLink tag={it.assets.asset_tag} /> : (it.device_name || '-')}</div>
                                         <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                                             แจ้งโดย: {it.reporter_name || '-'}{it.location ? ` · ${it.location}` : ''}
                                         </div>

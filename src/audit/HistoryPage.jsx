@@ -36,10 +36,16 @@ export default function HistoryPage() {
       if (a.error || c.error) { setError((a.error || c.error).message); return }
       // เครื่องในตาราง computers ที่มีในทะเบียนหลักแล้ว ไม่ต้องแสดงซ้ำ (ประวัติเดิมถูกรวมเข้าไปตอนเลือกเครื่อง)
       const tags = new Set((a.data || []).map(x => x.asset_tag))
-      setDevices([
+      const list = [
         ...(a.data || []).map(x => ({ kind: 'asset', id: x.id, tag: x.asset_tag, sub: [x.model, x.serial].filter(Boolean).join(' · '), raw: x })),
         ...(c.data || []).filter(x => !tags.has(x.computer_id)).map(x => ({ kind: 'computer', id: x.id, tag: x.computer_id, sub: x.spec || '', raw: x })),
-      ].sort(byTag('tag')))
+      ].sort(byTag('tag'))
+      setDevices(list)
+      // มาจากการกดรหัสเครื่องในหน้าอื่น (openHistory) → เปิดเครื่องนั้นเลย
+      let want = null
+      try { want = sessionStorage.getItem('open_history_tag'); sessionStorage.removeItem('open_history_tag') } catch { /* ignore */ }
+      const hit = want && list.find(d => d.tag === want)
+      if (hit) select(hit)
     })()
   }, [])
 
