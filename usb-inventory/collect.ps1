@@ -62,7 +62,7 @@ while ($true) {
   $Tag = ($Tag -replace '^PT-', 'PNT-') -replace '-(\d)$', '-0$1'
   if ($Tag -match '^[A-Z]{2,4}-[A-Z]{2,4}-\d{2,3}$') { break }
   Write-Host '  Wrong format, use e.g. COM-IT-05 / รูปแบบไม่ถูก ต้องเป็นแบบ COM-IT-05' -ForegroundColor Yellow
-  if ($NoPause) { exit 1 }
+  if ($PSBoundParameters.ContainsKey('Tag')) { exit 1 }   # ส่งรหัสมาทาง parameter (ทดสอบ) → ไม่ถามซ้ำ
   $Tag = ''
 }
 Write-Host "  Collecting $Tag ... (10-30 sec) / กำลังเก็บข้อมูล..." -ForegroundColor Cyan

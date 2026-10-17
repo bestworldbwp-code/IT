@@ -1,7 +1,13 @@
 @echo off
 rem Double-click: collect this computer info into the data folder on this USB (read-only)
-where powershell.exe >nul 2>nul || (echo.& echo  [X] PowerShell not found on this PC - send a photo of this screen to IT& echo.& pause & exit /b)
+rem The window always stays open at the end so any error can be read
+cd /d "%~dp0"
+ver
+where powershell.exe >nul 2>nul || (echo  [X] PowerShell not found on this PC& goto end)
 powershell.exe -NoProfile -Command "if ($PSVersionTable.PSVersion.Major -lt 3) { exit 2 }"
-if errorlevel 2 (echo.& echo  [X] Old Windows ^(PowerShell 2 / Windows 7^) - this PC needs the old-Windows version, tell IT& echo.& pause & exit /b)
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0collect.ps1"
-if errorlevel 1 (echo.& echo  [X] Error code %errorlevel% - take a photo of this screen& echo.& pause)
+if errorlevel 2 (echo  [X] Old Windows - PowerShell 2 / Windows 7 - tell IT& goto end)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0collect.ps1" -NoPause 2>> "%~dp0error-log.txt"
+if errorlevel 1 (echo  [X] Error code %errorlevel% - see error-log.txt on the USB)
+:end
+echo.
+pause
