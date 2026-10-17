@@ -98,13 +98,11 @@ const PAGES = {
   backup: { label: 'สำรองข้อมูล', icon: '💾', title: 'สำรองข้อมูล (Backup)', desc: 'ดาวน์โหลดไฟล์สำรองข้อมูลระบบ และบันทึกว่าสำรองเมื่อไหร่', List: () => <BackupPage /> },
 }
 
-const NAV_GROUPS = [
-  { title: null, items: ['home'] },
-  { title: 'งานบริการ', items: ['repairs', 'loans', 'maintenance', 'survey'] },
-  { title: 'ทรัพย์สิน', items: ['assets', 'computers', 'printers', 'qr_labels'] },
-  { title: 'ข้อมูลอ้างอิง', items: ['employees', 'software'] },
-  { title: 'เอกสารออดิท (QP-IT-01)', items: ['procedures', 'register', 'history', 'repair_form'] },
-  { title: 'เครื่องมือ', items: ['inventory', 'backup'] },
+// เมนูข้าง: งานที่ใช้ทุกวันอยู่บนสุด ที่เหลือพับเก็บไว้ (เปิดได้ทุกหน้าจากหน้าหลักด้วย)
+export const NAV_GROUPS = [
+  { title: null, items: ['home', 'repairs', 'assets', 'survey', 'history'] },
+  { title: 'เอกสารออดิท', items: ['register', 'repair_form', 'procedures'], fold: true },
+  { title: 'อื่น ๆ', items: ['loans', 'maintenance', 'qr_labels', 'employees', 'software', 'computers', 'printers', 'inventory', 'backup'], fold: true },
 ]
 
 const tabFromHash = () => {
@@ -120,6 +118,9 @@ export default function App() {
   const [pendingRepairs, setPendingRepairs] = useState(0)
   const [listKey, setListKey] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [openGroups, setOpenGroups] = useState({})
+  // กลุ่มที่พับไว้จะเปิดเองถ้าหน้าที่เปิดอยู่อยู่ในกลุ่มนั้น
+  const isOpen = (g) => !g.fold || (openGroups[g.title] ?? g.items.includes(activeTab))
   const [scanTag, setScanTag] = useState(() => new URLSearchParams(window.location.search).get('asset'))
 
   const clearScanUrl = () => {
@@ -218,8 +219,12 @@ export default function App() {
         <div className="nav">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi}>
-              {group.title && <div className="nav-group-title">{group.title}</div>}
-              {group.items.map(id => {
+              {group.title && (
+                <button className="nav-group-title nav-fold" onClick={() => setOpenGroups(o => ({ ...o, [group.title]: !isOpen(group) }))}>
+                  {group.title} <span style={{ marginLeft: 'auto' }}>{isOpen(group) ? '▾' : '▸'}</span>
+                </button>
+              )}
+              {isOpen(group) && group.items.map(id => {
                 const p = PAGES[id]
                 const badge = id === 'repairs' ? pendingRepairs : 0
                 return (

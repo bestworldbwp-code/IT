@@ -8,6 +8,35 @@ const REPAIR_STATUS = {
     done: { label: 'ซ่อมเสร็จ', style: { background: '#dcfce7', color: '#15803d' } },
 }
 
+// ศูนย์ควบคุม: ทุกหน้าของระบบจัดเป็นหมวด กดจากหน้าหลักได้เลย ไม่ต้องหาในเมนูข้าง
+// [หน้า, ไอคอน, ชื่อ, คำอธิบาย, เปิดฟอร์มเพิ่มทันที]
+const HUB = [
+    { title: 'งานประจำวัน', items: [
+        ['repairs', '🛎️', 'แจ้งซ่อม', 'รับเรื่อง / ปิดงานซ่อม'],
+        ['repairs', '➕', 'แจ้งซ่อมแทนผู้ใช้', 'เปิดฟอร์มแจ้งซ่อมใหม่', true],
+        ['loans', '🔄', 'ยืม-คืน', 'บันทึกการยืมอุปกรณ์'],
+        ['survey', '📋', 'สำรวจเครื่อง', 'เครื่องอยู่กับใคร ที่ไหน'],
+    ] },
+    { title: 'เครื่องและทะเบียน', items: [
+        ['assets', '📦', 'เครื่องและอุปกรณ์', 'ค้นหา / แก้ไข / ปลดระวาง'],
+        ['assets', '➕', 'ขึ้นทะเบียนเครื่องใหม่', 'เพิ่มเครื่องเข้าระบบ', true],
+        ['qr_labels', '🏷️', 'ป้าย QR', 'พิมพ์สติกเกอร์ติดเครื่อง'],
+        ['inventory', '🔌', 'นำเข้าข้อมูล USB', 'เติม S/N / สเปคจากโปรแกรม USB'],
+    ] },
+    { title: 'เอกสารออดิท (QP-IT-01)', items: [
+        ['register', '📋', 'ทะเบียนเครื่อง', 'FQP-IT-01:01'],
+        ['history', '🗂️', 'ประวัติเครื่อง', 'FQP-IT-01:02 + ใบแจ้งซ่อม'],
+        ['repair_form', '📝', 'ใบแจ้งซ่อม', 'FQP-IT-01:03 พิมพ์ / ฟอร์มเปล่า'],
+        ['procedures', '📘', 'ระเบียบปฏิบัติงาน', 'QP-IT-01'],
+    ] },
+    { title: 'ข้อมูลและเครื่องมือ', items: [
+        ['maintenance', '🔧', 'ลงประวัติบำรุงรักษา', 'บันทึกงานที่ไม่ได้มาจากใบแจ้งซ่อม'],
+        ['employees', '👥', 'พนักงาน', 'ทะเบียนพนักงาน'],
+        ['software', '💿', 'ซอฟต์แวร์/ลิขสิทธิ์', 'ไลเซนส์และวันหมดอายุ'],
+        ['backup', '💾', 'สำรองข้อมูล', 'ดาวน์โหลดไฟล์สำรอง'],
+    ] },
+]
+
 export default function Dashboard({ onNavigate }) {
     const [stats, setStats] = useState(null)
     const [recentRepairs, setRecentRepairs] = useState([])
@@ -99,14 +128,21 @@ export default function Dashboard({ onNavigate }) {
             </div>
 
             <div className="card" style={{ marginBottom: 16 }}>
-                <h3 className="section-title">ทำรายการด่วน</h3>
-                <div className="quick">
-                    <button onClick={() => onNavigate('repairs', true)}>🛎️ แจ้งซ่อม</button>
-                    <button onClick={() => onNavigate('loans', true)}>🔄 บันทึกการยืม</button>
-                    <button onClick={() => onNavigate('assets', true)}>📦 ขึ้นทะเบียนเครื่อง</button>
-                    <button onClick={() => onNavigate('maintenance', true)}>🔧 ลงประวัติเครื่อง</button>
-                    <button onClick={() => onNavigate('survey')}>📋 สำรวจเครื่อง</button>
-                </div>
+                <h3 className="section-title" style={{ marginBottom: 0 }}>ศูนย์ควบคุม</h3>
+                {HUB.map(g => (
+                    <div key={g.title}>
+                        <div className="hub-group">{g.title}</div>
+                        <div className="hub">
+                            {g.items.map(([tab, icon, label, desc, add]) => (
+                                <button key={label} onClick={() => onNavigate(tab, add)}>
+                                    <span className="hub-icon">{icon}</span>
+                                    <span className="hub-label">{label}</span>
+                                    <span className="hub-desc">{desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ))}
             </div>
 
             <div className="dash-grid">
