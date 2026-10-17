@@ -399,7 +399,8 @@ tbody td button { padding: 6px 12px !important; font-size: 0.82rem; }
 .label-text { min-width: 0; font-size: var(--lf); line-height: 1.25; color: #000; }
 .label-co { font-weight: 600; font-size: 0.8em; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .label-tag { font-weight: 800; font-size: 1.35em; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.label-sub { font-size: 0.85em; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ชื่อบริษัท/รุ่นยาวเกินช่อง → ขึ้นบรรทัดใหม่ได้ไม่เกิน 2 บรรทัด แทนการตัดเป็น "…" */
+.label-sub { font-size: 0.85em; line-height: 1.15; color: #334155; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 
 @page landscape { size: A4 landscape; margin: 10mm 10mm; }
 

@@ -1,19 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import QRCode from 'qrcode'
 import { getSupabase } from '../supabaseClient.js'
 import { useDocSettings, normalizeAppUrl, assetUrl, machineName, byTag, tagType, textMatch } from './docs.jsx'
 
 // ขนาดป้ายสติกเกอร์ (มม.) ให้เลือกตามกระดาษที่มี
+// sub = แสดงชื่อบริษัท+รุ่น, hint = แสดงคำว่า "สแกนเพื่อแจ้งซ่อม"
+// 44 มม. วางได้ 4 ดวงต่อแถวบน A4 (กว้างพิมพ์ได้ 186 มม. หลังหักขอบกระดาษ)
 const SIZES = {
-  s: { label: 'เล็ก 30×20 มม. (ป้ายเล็ก/โน้ตบุ๊ก)', w: 30, h: 20, qr: 16, font: 6.5, cols: 6 },
-  m: { label: 'กลาง 50×30 มม. (แนะนำ)', w: 50, h: 30, qr: 24, font: 8, cols: 4 },
-  l: { label: 'ใหญ่ 70×40 มม. (PC/เครื่องพิมพ์)', w: 70, h: 40, qr: 32, font: 10, cols: 3 },
+  // กว้าง 30 มม. เดิมเหลือที่ข้าง QR ไม่พอ รหัสเครื่องโดนตัดเป็น "COM-I…" ทุกดวง
+  s: { label: 'เล็ก 38×20 มม. (ป้ายเล็ก/โน้ตบุ๊ก)', w: 38, h: 20, qr: 15, font: 6.5 },
+  c: { label: 'กะทัดรัด 44×25 มม. (แนะนำ)', w: 44, h: 25, qr: 20, font: 7.2, sub: true },
+  m: { label: 'กลาง 50×30 มม.', w: 50, h: 30, qr: 24, font: 8, sub: true },
+  l: { label: 'ใหญ่ 70×40 มม. (PC/เครื่องพิมพ์)', w: 70, h: 40, qr: 32, font: 10, sub: true, hint: true },
 }
 
 export default function QrLabelsPage() {
   const [assets, setAssets] = useState([])
   const [loading, setLoading] = useState(true)
-  const [size, setSize] = useState('m')
+  const [size, setSize] = useState('c')
   const [cat, setCat] = useState('all')
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState(new Set())
@@ -46,7 +50,9 @@ export default function QrLabelsPage() {
     ;(async () => {
       const out = {}
       for (const a of toPrint) {
-        out[a.id] = await QRCode.toDataURL(assetUrl(a.asset_tag, appUrl), { margin: 0, width: 256, errorCorrectionLevel: 'M' })
+        // margin 1 = ขอบขาวในตัวรูป กันสแกนไม่ติดตอนติดบนเครื่องสีดำ
+        // ระดับ Q กันรอยขีดข่วน/คราบได้มากกว่า M แต่ยังได้ QR ความละเอียดเท่าเดิม (33×33) กับลิงก์ยาวขนาดนี้
+        out[a.id] = await QRCode.toDataURL(assetUrl(a.asset_tag, appUrl), { margin: 1, width: 256, errorCorrectionLevel: 'Q' })
       }
       if (alive) setQrs({ url: appUrl, map: out })
     })()
@@ -55,6 +61,8 @@ export default function QrLabelsPage() {
 
   const toggle = (id) => setPicked(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const sz = SIZES[size]
+  // ชื่อบริษัทให้ขึ้นบรรทัดใหม่ตรงช่องว่างเท่านั้น ("เบสท์เวิลด์ / อินเตอร์พลาส") ไม่ใช่ตัดกลางคำ
+  const companyWords = settings.company.replace(/^บริษัท\s*/, '').replace(/\s*จำกัด.*$/, '').split(/\s+/).filter(Boolean)
   const isLocal = /localhost|127\.0\.0\.1/.test(appUrl)
   const ready = toPrint.length > 0 && qrs.url === appUrl && toPrint.every(a => qrs.map[a.id]) // QR ครบและเป็นของ URL ปัจจุบันก่อนถึงจะให้กดพิมพ์
 
@@ -114,9 +122,9 @@ export default function QrLabelsPage() {
                 <div className="label-text">
                   <div className="label-co">{machineName(a.asset_tag)}</div>
                   <div className="label-tag">{a.asset_tag}</div>
-                  {sz.h >= 30 && <div className="label-sub">{settings.company.replace(/^บริษัท\s*/, '').replace(/\s*จำกัด.*$/, '')}</div>}
-                  {sz.h >= 30 && <div className="label-sub">{a.model || ''}</div>}
-                  {sz.h >= 40 && <div className="label-sub">สแกนเพื่อแจ้งซ่อม / ยืม</div>}
+                  {sz.sub && <div className="label-sub">{companyWords.map((w, i) => <Fragment key={i}>{i > 0 && ' '}<span style={{ whiteSpace: 'nowrap' }}>{w}</span></Fragment>)}</div>}
+                  {sz.sub && <div className="label-sub">{a.model || ''}</div>}
+                  {sz.hint && <div className="label-sub">สแกนเพื่อแจ้งซ่อม / ยืม</div>}
                 </div>
               </div>
             ))}
