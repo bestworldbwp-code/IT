@@ -475,3 +475,64 @@ tbody td button { padding: 6px 12px !important; font-size: 0.82rem; }
 .rf-bar:hover:not(:disabled), .rf-bar.on { border-color: var(--primary); background: #f5f7ff; }
 .rf-bar-arrow { width: 14px; color: var(--primary); }
 .rf-bar-problem { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* =====================================================================
+   ธีมแบบ iOS — ฟอนต์ระบบของ Apple (SF Pro) บน iPhone/Mac
+   เครื่อง Windows ใช้ Inter (หน้าตาใกล้ SF) + Noto Sans Thai (ใกล้ฟอนต์ไทยของ iPhone)
+   ===================================================================== */
+:root {
+  --primary: #007aff;
+  --primary-hover: #0066d6;
+  --primary-soft: #e8f1ff;
+  --bg-main: #f2f2f7;
+  --text-main: #1c1c1e;
+  --text-muted: #8e8e93;
+  --border: #e5e5ea;
+  --success: #34c759;
+  --warning: #ff9500;
+  --danger: #ff3b30;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow: 0 2px 12px rgb(0 0 0 / 0.06);
+}
+body, button, input, select, textarea {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', 'Noto Sans Thai', 'Segoe UI', sans-serif;
+  letter-spacing: -0.01em;
+}
+h1, h2, h3 { letter-spacing: -0.02em; }
+
+.card { border: none; box-shadow: var(--shadow-sm); }
+button { border-radius: 10px; }
+button.primary { box-shadow: none; }
+button.primary:hover:not(:disabled) { background: var(--primary-hover); }
+button:focus-visible, input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 4px rgb(0 122 255 / .18); border-color: var(--primary); }
+input, select, textarea { border-radius: 10px; background: #fff; }
+
+/* เมนูข้างแบบ sidebar ของ iPad/Mac: พื้นอ่อน ตัวหนังสือเข้ม */
+.sidebar { background: #f9f9fb; color: var(--text-main); border-right: 1px solid var(--border); }
+.brand-logo { background: linear-gradient(135deg, #0a84ff, #5ac8fa); }
+.brand-sub { color: var(--text-muted); }
+.nav-group-title { color: var(--text-muted); letter-spacing: 0; font-size: 0.75rem; }
+.nav-fold:hover { color: var(--text-main); }
+.nav-item { color: var(--text-main); border-radius: 10px; }
+.nav-item:hover:not(:disabled) { background: rgb(0 0 0 / .05); color: var(--text-main); }
+.nav-item.active { background: var(--primary); color: #fff; box-shadow: none; }
+.nav-badge { background: var(--danger); }
+.sidebar-footer { border-top: 1px solid var(--border); }
+
+.topbar { background: rgb(242 242 247 / .8); backdrop-filter: saturate(180%) blur(20px); }
+.topbar h1 { font-size: 1.6rem; font-weight: 700; }
+
+.stat { border: none; box-shadow: var(--shadow-sm); border-radius: var(--radius); }
+.stat:hover:not(:disabled) { box-shadow: var(--shadow); border-color: transparent; }
+.stat-icon { border-radius: 12px; }
+.hub button { border: none; background: #f2f2f7; border-radius: 14px; }
+.hub button:hover:not(:disabled) { background: var(--primary-soft); }
+.rf-bar { border: none; box-shadow: var(--shadow-sm); border-radius: 14px; }
+.rf-bar:hover:not(:disabled), .rf-bar.on { background: var(--primary-soft); }
+.badge, .status-badge { border-radius: 999px; }
+table th { color: var(--text-muted); font-weight: 600; }
+
+/* เอกสารที่พิมพ์ยังเป็นขาว-ดำเหมือนเดิม */
+.doc, .doc * { letter-spacing: 0; }
