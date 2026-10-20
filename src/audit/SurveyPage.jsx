@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
-import { DocHeader, SignatureBlock, fmtDateTime, getDocSettings, today, byTag, isLeaver } from './docs.jsx'
+import { DocHeader, SignatureBlock, fmtDateTime, getDocSettings, today, byTag, isLeaver, machineName } from './docs.jsx'
 
 const CONDITIONS = [
   { v: 'ok', label: '✅ ใช้งานปกติ' },
@@ -169,106 +169,116 @@ export default function SurveyPage() {
         <button className="secondary" onClick={() => setPrintMode(true)}>🖨️ พิมพ์ใบสำรวจกระดาษ</button>
       </div>
 
-      <div className="history-layout">
-        {/* รายการเครื่อง */}
-        <div className="card device-list" style={{ padding: 10 }}>
-          <input ref={searchRef} autoFocus placeholder="พิมพ์รหัสเครื่อง / ชื่อผู้ใช้..." value={search} onChange={e => setSearch(e.target.value)} style={{ marginBottom: 8 }} />
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400, padding: '0 4px 8px' }}>
-            <input type="checkbox" style={{ width: 'auto' }} checked={onlyPending} onChange={e => setOnlyPending(e.target.checked)} /> แสดงเฉพาะที่ยังไม่ได้เช็คจริง ({assets.length - checkedCount})
-          </label>
-          {list.map(a => {
-            const s = surveyed[a.id]
-            return (
-              // หน้าตาเดียวกับรายการในประวัติเครื่อง: รหัส + บรรทัดเดียว · สัญลักษณ์เล็กด้านหน้าบอกว่าเช็คแล้วหรือยัง
-              <button key={a.id} className={'device-row' + (current?.id === a.id ? ' on' : '')} onClick={() => open(a)}
-                title={checked(a) ? 'เช็คแล้ว' : s ? 'ข้อมูลเดิม ยังไม่ได้เดินดู' : 'ยังไม่เช็ค'}>
-                <div style={{ fontWeight: 600 }}>
-                  <span style={{ display: 'inline-block', width: 22 }}>{checked(a) ? (s.new_data?.condition === 'ok' ? '✅' : '⚠️') : s ? '📄' : '⬜'}</span>{a.asset_tag}
-                </div>
-                <div className="muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingLeft: 22 }}>{empLabel(a.owner)} · {a.model || '-'}</div>
-              </button>
-            )
-          })}
-          {!list.length && <div className="muted" style={{ padding: 12, textAlign: 'center' }}>{onlyPending && doneCount === assets.length && assets.length ? '🎉 สำรวจครบทุกเครื่องแล้ว' : 'ไม่พบเครื่อง'}</div>}
+      {/* ค้นหา + ตัวกรอง */}
+      <div className="card doc-toolbar" style={{ marginBottom: 16 }}>
+        <input ref={searchRef} autoFocus placeholder="ค้นหา รหัส / ชื่อผู้ใช้ / รุ่น..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 200 }} />
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400, margin: 0 }}>
+          <input type="checkbox" style={{ width: 'auto' }} checked={onlyPending} onChange={e => setOnlyPending(e.target.checked)} /> เฉพาะที่ยังไม่ได้เช็คจริง ({assets.length - checkedCount})
+        </label>
+        <span className="muted" style={{ fontSize: '0.85rem' }}>✅ เช็คแล้ว · ⚠️ มีปัญหา · 📄 ข้อมูลเดิม · ⬜ ยังไม่เช็ค — กดแถวเพื่อเช็ค</span>
+      </div>
+
+      {/* ตารางแบบเดียวกับทะเบียน FQP-IT-01:01 */}
+      <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+        <table className="doc-table survey-table">
+          <thead><tr><th style={{ width: 44 }}>เช็ค</th><th style={{ width: 40 }}>ที่</th><th>รหัสเครื่องจักร</th><th>ชื่อเครื่องจักร</th><th>รุ่น</th><th>สถานที่ติดตั้ง</th><th>ผู้ใช้งาน</th><th>ผลสำรวจรอบนี้</th></tr></thead>
+          <tbody>
+            {list.map((a, i) => {
+              const s = surveyed[a.id]
+              const mark = checked(a) ? (s.new_data?.condition === 'ok' ? '✅' : '⚠️') : s ? '📄' : '⬜'
+              return (
+                <tr key={a.id} onClick={() => open(a)} style={{ cursor: 'pointer', background: checked(a) ? '#f0fdf4' : undefined }}>
+                  <td style={{ textAlign: 'center', fontSize: '1.1rem' }}>{mark}</td>
+                  <td>{i + 1}</td>
+                  <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{a.asset_tag}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{machineName(a.asset_tag)}</td>
+                  <td>{a.model || '-'}</td>
+                  <td>{[a.building, a.position_detail, a.location].filter(Boolean).join(' · ') || '-'}</td>
+                  <td>{empLabel(a.owner)}{notes[a.asset_tag] && <div style={{ fontSize: '0.75rem', color: '#b45309' }}>📝 {notes[a.asset_tag]}</div>}</td>
+                  <td style={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{s ? <>{checked(a) ? COND_LABEL[s.new_data?.condition] : 'ข้อมูลเดิม'}<div className="muted">{fmtDateTime(s.created_at)}</div></> : <span className="muted">ยังไม่เช็ค</span>}</td>
+                </tr>
+              )
+            })}
+            {!list.length && <tr><td colSpan="8" style={{ textAlign: 'center', padding: 24 }} className="muted">{onlyPending && checkedCount === assets.length && assets.length ? '🎉 เช็คครบทุกเครื่องแล้ว' : 'ไม่พบเครื่อง'}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ฟอร์มเช็คเครื่อง (เปิดเมื่อกดแถว) */}
+      {current && (
+        <div className="overlay" style={{ overflowY: 'auto', padding: '0 12px' }} onClick={() => setCurrent(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 760, margin: '48px auto' }}>
+                <form className="card" onSubmit={save}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
+                    <h2 style={{ margin: 0 }}>{current.asset_tag}</h2>
+                    <span className="muted">{current.model}</span>
+                  </div>
+                  {notes[current.asset_tag] && <div style={{ marginBottom: 8, color: "#b45309" }}>📝 {notes[current.asset_tag]}</div>}
+                  <div className="muted" style={{ marginBottom: 16 }}>
+                    ตามทะเบียนเดิม: ผู้ใช้ <strong>{empLabel(current.owner)}</strong>
+                    {empById[current.owner]?.position && <span> · ตำแหน่ง <strong>{empById[current.owner].position}</strong></span>}
+                    {' '}· สถานที่ <strong>{[current.building, current.position_detail, current.location].filter(Boolean).join(' · ') || '-'}</strong>
+                    {surveyed[current.id] && <span> · สำรวจแล้วเมื่อ {fmtDateTime(surveyed[current.id].created_at)} (บันทึกซ้ำได้)</span>}
+                  </div>
+    
+                  <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <label>ผู้ใช้งานจริงตอนนี้</label>
+                      {/* บนมือถือ ช่องพิมพ์อยู่บรรทัดบน ปุ่มลงบรรทัดล่าง — เดิมช่องถูกบีบเหลือ ~70px มองไม่เห็นที่พิมพ์ */}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <input list="emp-list" value={form.owner} onChange={e => setForm({ ...form, owner: e.target.value })} placeholder="พิมพ์รหัสหรือชื่อพนักงาน" style={{ flex: '1 1 220px' }} />
+                        <button type="button" className={parseOwner(form.owner) === '0000' ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, owner: '0000' })} title="ไม่มีผู้ใช้ประจำ ใช้ร่วมกันในแผนก">🏢 ส่วนกลาง</button>
+                        <button type="button" className={noUser ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, owner: '', condition: form.condition === 'ok' ? 'spare' : form.condition })} title="ไม่มีคนใช้แล้ว เครื่องว่าง → จะตั้งสภาพเป็นเก็บสำรองให้">⛔ ไม่มีผู้ใช้</button>
+                      </div>
+                      <datalist id="emp-list">
+                        {employees.filter(e => !isLeaver(e.name) && e.employee_id !== '0000').map(e => <option key={e.employee_id} value={`${e.employee_id} - ${e.name}${e.department ? ` (${e.department})` : ''}`} />)}
+                      </datalist>
+                      {noUser && <div className="muted" style={{ marginTop: 4, color: '#b45309' }}>→ ไม่มีผู้ใช้ประจำ: บันทึกแล้วชื่อเดิมจะถูกถอดออก และสถานะเครื่องเป็น "สำรอง"</div>}
+                      {form.owner === '' && !noUser && <div className="muted" style={{ marginTop: 4 }}>ยังไม่ระบุผู้ใช้ — เลือกชื่อ, กด "ส่วนกลาง" หรือ "ไม่มีผู้ใช้"</div>}
+                      {parseOwner(form.owner) && empById[parseOwner(form.owner)] && (
+                        <div className="muted" style={{ marginTop: 4 }}>→ {empLabel(parseOwner(form.owner))}{empById[parseOwner(form.owner)].position ? ` · ตำแหน่ง ${empById[parseOwner(form.owner)].position}` : ''}</div>
+                      )}
+                    </div>
+                    <div>
+                      <label>แผนกที่พบเครื่อง</label>
+                      <input list="dept-list" value={form.dept} onChange={e => setForm({ ...form, dept: e.target.value })} placeholder="เช่น บัญชี" />
+                      <datalist id="dept-list">{departments.map(d => <option key={d} value={d} />)}</datalist>
+                    </div>
+                    <div>
+                      <label>อาคาร</label>
+                      <input list="bld-list" value={form.building} onChange={e => setForm({ ...form, building: e.target.value })} placeholder="เช่น อาคารสำนักงาน / โรงงาน 1" />
+                      <datalist id="bld-list">{buildings.map(b => <option key={b} value={b} />)}</datalist>
+                    </div>
+                    <div>
+                      <label>ตำแหน่งที่ตั้ง (ชั้น / ห้อง / จุดวาง)</label>
+                      <input list="pos-list" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} placeholder="เช่น ชั้น 2 ห้องบัญชี โต๊ะ 3" />
+                      <datalist id="pos-list">{positions.map(p => <option key={p} value={p} />)}</datalist>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label>สภาพเครื่อง</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 8 }}>
+                        {CONDITIONS.map(c => (
+                          <button type="button" key={c.v} className={form.condition === c.v ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, condition: c.v })}>{c.label}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label>หมายเหตุ</label>
+                      <input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="เช่น ย้ายมาจากฝ่ายขายเมื่อเดือนก่อน" />
+                    </div>
+                  </div>
+    
+                  <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+                    <button className="primary" type="submit" disabled={saving} style={{ flex: 1 }}>{saving ? 'กำลังบันทึก...' : '💾 บันทึกและไปเครื่องถัดไป'}</button>
+                    <button className="secondary" type="button" onClick={() => setCurrent(null)}>ยกเลิก</button>
+                  </div>
+                  <div className="muted" style={{ marginTop: 10 }}>บันทึกแล้วทะเบียนทรัพย์สินจะอัปเดตผู้ใช้/สถานที่ทันที และเก็บประวัติการสำรวจไว้เป็นหลักฐาน</div>
+                </form>
+          </div>
         </div>
+      )}
 
-        {/* ฟอร์มสำรวจ */}
-        <div>
-          {!current && (
-            <div className="card" style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '2rem', marginBottom: 8 }}>📋</div>
-              เลือกเครื่องจากรายการ (หรือพิมพ์รหัสที่ติดบนเครื่อง) แล้วกรอกว่าตอนนี้ใครใช้ อยู่ที่ไหน
-            </div>
-          )}
-          {current && (
-            <form className="card" onSubmit={save}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
-                <h2 style={{ margin: 0 }}>{current.asset_tag}</h2>
-                <span className="muted">{current.model}</span>
-              </div>
-              {notes[current.asset_tag] && <div style={{ marginBottom: 8, color: "#b45309" }}>📝 {notes[current.asset_tag]}</div>}
-              <div className="muted" style={{ marginBottom: 16 }}>
-                ตามทะเบียนเดิม: ผู้ใช้ <strong>{empLabel(current.owner)}</strong>
-                {empById[current.owner]?.position && <span> · ตำแหน่ง <strong>{empById[current.owner].position}</strong></span>}
-                {' '}· สถานที่ <strong>{[current.building, current.position_detail, current.location].filter(Boolean).join(' · ') || '-'}</strong>
-                {surveyed[current.id] && <span> · สำรวจแล้วเมื่อ {fmtDateTime(surveyed[current.id].created_at)} (บันทึกซ้ำได้)</span>}
-              </div>
-
-              <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div>
-                  <label>ผู้ใช้งานจริงตอนนี้</label>
-                  {/* บนมือถือ ช่องพิมพ์อยู่บรรทัดบน ปุ่มลงบรรทัดล่าง — เดิมช่องถูกบีบเหลือ ~70px มองไม่เห็นที่พิมพ์ */}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <input list="emp-list" value={form.owner} onChange={e => setForm({ ...form, owner: e.target.value })} placeholder="พิมพ์รหัสหรือชื่อพนักงาน" style={{ flex: '1 1 220px' }} />
-                    <button type="button" className={parseOwner(form.owner) === '0000' ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, owner: '0000' })} title="ไม่มีผู้ใช้ประจำ ใช้ร่วมกันในแผนก">🏢 ส่วนกลาง</button>
-                    <button type="button" className={noUser ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, owner: '', condition: form.condition === 'ok' ? 'spare' : form.condition })} title="ไม่มีคนใช้แล้ว เครื่องว่าง → จะตั้งสภาพเป็นเก็บสำรองให้">⛔ ไม่มีผู้ใช้</button>
-                  </div>
-                  <datalist id="emp-list">
-                    {employees.filter(e => !isLeaver(e.name) && e.employee_id !== '0000').map(e => <option key={e.employee_id} value={`${e.employee_id} - ${e.name}${e.department ? ` (${e.department})` : ''}`} />)}
-                  </datalist>
-                  {noUser && <div className="muted" style={{ marginTop: 4, color: '#b45309' }}>→ ไม่มีผู้ใช้ประจำ: บันทึกแล้วชื่อเดิมจะถูกถอดออก และสถานะเครื่องเป็น "สำรอง"</div>}
-                  {form.owner === '' && !noUser && <div className="muted" style={{ marginTop: 4 }}>ยังไม่ระบุผู้ใช้ — เลือกชื่อ, กด "ส่วนกลาง" หรือ "ไม่มีผู้ใช้"</div>}
-                  {parseOwner(form.owner) && empById[parseOwner(form.owner)] && (
-                    <div className="muted" style={{ marginTop: 4 }}>→ {empLabel(parseOwner(form.owner))}{empById[parseOwner(form.owner)].position ? ` · ตำแหน่ง ${empById[parseOwner(form.owner)].position}` : ''}</div>
-                  )}
-                </div>
-                <div>
-                  <label>แผนกที่พบเครื่อง</label>
-                  <input list="dept-list" value={form.dept} onChange={e => setForm({ ...form, dept: e.target.value })} placeholder="เช่น บัญชี" />
-                  <datalist id="dept-list">{departments.map(d => <option key={d} value={d} />)}</datalist>
-                </div>
-                <div>
-                  <label>อาคาร</label>
-                  <input list="bld-list" value={form.building} onChange={e => setForm({ ...form, building: e.target.value })} placeholder="เช่น อาคารสำนักงาน / โรงงาน 1" />
-                  <datalist id="bld-list">{buildings.map(b => <option key={b} value={b} />)}</datalist>
-                </div>
-                <div>
-                  <label>ตำแหน่งที่ตั้ง (ชั้น / ห้อง / จุดวาง)</label>
-                  <input list="pos-list" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} placeholder="เช่น ชั้น 2 ห้องบัญชี โต๊ะ 3" />
-                  <datalist id="pos-list">{positions.map(p => <option key={p} value={p} />)}</datalist>
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label>สภาพเครื่อง</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 8 }}>
-                    {CONDITIONS.map(c => (
-                      <button type="button" key={c.v} className={form.condition === c.v ? 'primary' : 'secondary'} onClick={() => setForm({ ...form, condition: c.v })}>{c.label}</button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label>หมายเหตุ</label>
-                  <input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="เช่น ย้ายมาจากฝ่ายขายเมื่อเดือนก่อน" />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-                <button className="primary" type="submit" disabled={saving} style={{ flex: 1 }}>{saving ? 'กำลังบันทึก...' : '💾 บันทึกและไปเครื่องถัดไป'}</button>
-                <button className="secondary" type="button" onClick={() => setCurrent(null)}>ยกเลิก</button>
-              </div>
-              <div className="muted" style={{ marginTop: 10 }}>บันทึกแล้วทะเบียนทรัพย์สินจะอัปเดตผู้ใช้/สถานที่ทันที และเก็บประวัติการสำรวจไว้เป็นหลักฐาน</div>
-            </form>
-          )}
-
+      <div style={{ marginTop: 16 }}>
           {problems.length > 0 && !current && (
             <div className="card" style={{ marginTop: 16 }}>
               <h3 className="section-title">เครื่องที่พบปัญหาในรอบนี้</h3>
@@ -280,7 +290,6 @@ export default function SurveyPage() {
               ))}
             </div>
           )}
-        </div>
       </div>
     </div>
   )

@@ -584,3 +584,6 @@ table td, table th { line-height: 1.45; }
 @media (max-width: 480px) { .widget-value { font-size: 1.8rem; } .home-greet { font-size: 1.15rem; } }
 .dash-grid > *, .widgets > * { min-width: 0; }
 @media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
+
+.survey-table tbody tr:hover { background: var(--primary-soft) !important; }
+.survey-table td { vertical-align: top; }
