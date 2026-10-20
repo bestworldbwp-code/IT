@@ -100,9 +100,9 @@ const PAGES = {
 
 // เมนูข้าง: งานที่ใช้ทุกวันอยู่บนสุด ที่เหลือพับเก็บไว้ (เปิดได้ทุกหน้าจากหน้าหลักด้วย)
 export const NAV_GROUPS = [
-  { title: null, items: ['home', 'repairs', 'assets', 'survey', 'history'] },
-  { title: 'เอกสารออดิท', items: ['register', 'repair_form', 'procedures'], fold: true },
-  { title: 'อื่น ๆ', items: ['loans', 'maintenance', 'qr_labels', 'employees', 'software', 'computers', 'printers', 'inventory', 'backup'], fold: true },
+  { title: null, items: ['home', 'repairs', 'assets'] },
+  { title: 'เอกสารออดิท (QP-IT-01)', items: ['register', 'history', 'repair_form', 'procedures'] },
+  { title: 'เครื่องมือแอดมิน', items: ['survey', 'qr_labels', 'inventory', 'loans', 'maintenance', 'employees', 'software', 'computers', 'printers', 'backup'], fold: true },
 ]
 
 const tabFromHash = () => {

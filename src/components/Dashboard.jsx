@@ -39,6 +39,7 @@ const HUB = [
 
 export default function Dashboard({ onNavigate }) {
     const [stats, setStats] = useState(null)
+    const [showAdmin, setShowAdmin] = useState(false)
     const [recentRepairs, setRecentRepairs] = useState([])
     const [loadError, setLoadError] = useState('')
 
@@ -177,18 +178,45 @@ export default function Dashboard({ onNavigate }) {
             </div>
 
             <div className="card">
-                <div className="card-head"><h3 className="section-title" style={{ margin: 0 }}>เมนูทั้งหมด</h3></div>
+                <div className="card-head"><h3 className="section-title" style={{ margin: 0 }}>เมนูหลัก</h3></div>
                 <div className="apps">
-                    {HUB.flatMap(g => g.items).filter(([, , label]) => !label.startsWith('แจ้งซ่อมแทน')).map(([tab, icon, label, desc, add], i) => (
+                    {MAIN_APPS.map(([tab, icon, label, desc, add], i) => (
                         <button key={label} className="app-tile" onClick={() => onNavigate(tab, add)} title={desc}>
                             <span className="app-icon" style={{ background: APP_COLORS[i % APP_COLORS.length] }}>{icon}</span>
                             <span className="app-label">{label}</span>
                         </button>
                     ))}
                 </div>
+                <button className="ghost" style={{ marginTop: 8 }} onClick={() => setShowAdmin(v => !v)}>{showAdmin ? '▾' : '▸'} เครื่องมือแอดมิน</button>
+                {showAdmin && (
+                    <div className="apps">
+                        {ADMIN_APPS.map(([tab, icon, label, desc], i) => (
+                            <button key={label} className="app-tile" onClick={() => onNavigate(tab)} title={desc}>
+                                <span className="app-icon" style={{ background: '#8e8e93' }}>{icon}</span>
+                                <span className="app-label">{label}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     )
 }
+
+// เมนูหลักสำหรับงานประจำ + เตรียมออดิท · ที่เหลือพับไว้ใน "เครื่องมือแอดมิน"
+const MAIN_APPS = [
+    ['repairs', '🛎️', 'แจ้งซ่อม', 'รับเรื่อง / ปิดงานซ่อม'],
+    ['repairs', '➕', 'แจ้งซ่อมใหม่', 'เปิดฟอร์มแจ้งซ่อม', true],
+    ['assets', '📦', 'ทะเบียนเครื่อง', 'ค้นหา / แก้ไขเครื่อง'],
+    ['register', '📋', 'FQP-IT-01:01', 'ทะเบียนรายชื่อเครื่อง (พิมพ์)'],
+    ['history', '🗂️', 'FQP-IT-01:02', 'ประวัติเครื่อง + ใบแจ้งซ่อม'],
+    ['repair_form', '📝', 'FQP-IT-01:03', 'ใบแจ้งซ่อม (พิมพ์)'],
+    ['procedures', '📘', 'QP-IT-01', 'ระเบียบปฏิบัติงาน'],
+]
+const ADMIN_APPS = [
+    ['survey', '🔍', 'สำรวจเครื่อง'], ['qr_labels', '🏷️', 'ป้าย QR'], ['inventory', '🔌', 'นำเข้า USB'],
+    ['loans', '🔄', 'ยืม-คืน'], ['maintenance', '🔧', 'บำรุงรักษา'], ['employees', '👥', 'พนักงาน'],
+    ['software', '💿', 'ซอฟต์แวร์'], ['backup', '💾', 'สำรองข้อมูล'],
+]
 
 const APP_COLORS = ['#007aff', '#ff9500', '#34c759', '#5856d6', '#ff2d55', '#5ac8fa', '#af52de', '#ffcc00', '#30b0c7', '#ff3b30', '#64d2ff', '#a2845e']
