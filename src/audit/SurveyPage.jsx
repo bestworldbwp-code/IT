@@ -61,15 +61,18 @@ export default function SurveyPage() {
   const buildings = useMemo(() => [...new Set([...BUILDINGS, ...assets.map(a => a.building).filter(Boolean)])], [assets])
   const positions = useMemo(() => [...new Set(assets.map(a => a.position_detail).filter(Boolean))].sort(), [assets])
 
+  const checked = (a) => !!surveyed[a.id] && surveyed[a.id].new_data?.source !== 'old_data'
   const list = useMemo(() => {
     const q = search.trim().toLowerCase()
     return assets.filter(a =>
-      (!onlyPending || !surveyed[a.id]) &&
+      (!onlyPending || !checked(a)) &&
       (!q || [a.asset_tag, a.model, a.owner, empById[a.owner]?.name].some(v => String(v || '').toLowerCase().includes(q)))
     )
   }, [assets, search, onlyPending, surveyed, empById])
 
   const doneCount = assets.filter(a => surveyed[a.id]).length
+  // เดินเช็คจริงแล้ว = มีบันทึกสำรวจที่ไม่ได้มาจากการลงข้อมูลเดิม (source: 'old_data')
+  const checkedCount = assets.filter(a => checked(a)).length
   const problems = assets.filter(a => surveyed[a.id] && surveyed[a.id].new_data?.condition !== 'ok')
 
   function open(a) {
@@ -156,10 +159,10 @@ export default function SurveyPage() {
         <div style={{ flex: 1, minWidth: 220 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <strong>รอบสำรวจ {new Date(ROUND + '-01').toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })}</strong>
-            <span>{doneCount} / {assets.length} เครื่อง</span>
+            <span>✅ เช็คจริง {checkedCount} · 📄 ข้อมูลเดิม {doneCount - checkedCount} · เหลือ {assets.length - checkedCount} / {assets.length}</span>
           </div>
           <div style={{ height: 10, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
-            <div style={{ width: `${assets.length ? doneCount / assets.length * 100 : 0}%`, height: '100%', background: 'var(--primary)', transition: 'width .3s' }} />
+            <div style={{ width: `${assets.length ? checkedCount / assets.length * 100 : 0}%`, height: '100%', background: 'var(--success)', transition: 'width .3s' }} />
           </div>
           {problems.length > 0 && <div className="muted" style={{ marginTop: 6, color: '#b45309' }}>พบปัญหา {problems.length} เครื่อง (ชำรุด/ไม่พบ/ไม่ได้ใช้)</div>}
         </div>
@@ -171,15 +174,19 @@ export default function SurveyPage() {
         <div className="card device-list" style={{ padding: 10 }}>
           <input ref={searchRef} autoFocus placeholder="พิมพ์รหัสเครื่อง / ชื่อผู้ใช้..." value={search} onChange={e => setSearch(e.target.value)} style={{ marginBottom: 8 }} />
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400, padding: '0 4px 8px' }}>
-            <input type="checkbox" style={{ width: 'auto' }} checked={onlyPending} onChange={e => setOnlyPending(e.target.checked)} /> แสดงเฉพาะที่ยังไม่สำรวจ ({assets.length - doneCount})
+            <input type="checkbox" style={{ width: 'auto' }} checked={onlyPending} onChange={e => setOnlyPending(e.target.checked)} /> แสดงเฉพาะที่ยังไม่ได้เช็คจริง ({assets.length - checkedCount})
           </label>
           {list.map(a => {
             const s = surveyed[a.id]
             return (
-              <button key={a.id} className={`device-row ${current?.id === a.id ? 'on' : ''}`} onClick={() => open(a)}>
+              <button key={a.id} className={`device-row ${current?.id === a.id ? 'on' : ''}`} onClick={() => open(a)}
+                style={checked(a) && current?.id !== a.id ? { background: '#f0fdf4' } : undefined}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontWeight: 600, flex: 1 }}>{a.asset_tag}</span>
-                  {s && <span style={{ fontSize: '0.75rem' }}>{s.new_data?.condition === 'ok' ? '✅' : COND_LABEL[s.new_data?.condition]?.slice(0, 2)}</span>}
+                  {checked(a)
+                    ? <span className="badge" style={{ background: '#dcfce7', color: '#15803d' }}>✅ เช็คแล้ว{s.new_data?.condition !== 'ok' ? ` · ${COND_LABEL[s.new_data?.condition]?.replace(/^\S+\s/, '') || ''}` : ''}</span>
+                    : s ? <span className="badge" style={{ background: '#f1f5f9', color: '#64748b' }}>📄 ข้อมูลเดิม</span>
+                      : <span className="badge" style={{ background: '#fff7ed', color: '#c2410c' }}>⬜ ยังไม่เช็ค</span>}
                 </div>
                 <div className="muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.model || '-'} · {empLabel(a.owner)}</div>
                 {notes[a.asset_tag] && <div style={{ fontSize: '0.75rem', color: '#b45309', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>📝 {notes[a.asset_tag]}</div>}
