@@ -179,17 +179,13 @@ export default function SurveyPage() {
           {list.map(a => {
             const s = surveyed[a.id]
             return (
-              <button key={a.id} className={`device-row ${current?.id === a.id ? 'on' : ''}`} onClick={() => open(a)}
-                style={checked(a) && current?.id !== a.id ? { background: '#f0fdf4' } : undefined}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontWeight: 600, flex: 1 }}>{a.asset_tag}</span>
-                  {checked(a)
-                    ? <span className="badge" style={{ background: '#dcfce7', color: '#15803d' }}>✅ เช็คแล้ว{s.new_data?.condition !== 'ok' ? ` · ${COND_LABEL[s.new_data?.condition]?.replace(/^\S+\s/, '') || ''}` : ''}</span>
-                    : s ? <span className="badge" style={{ background: '#f1f5f9', color: '#64748b' }}>📄 ข้อมูลเดิม</span>
-                      : <span className="badge" style={{ background: '#fff7ed', color: '#c2410c' }}>⬜ ยังไม่เช็ค</span>}
+              // หน้าตาเดียวกับรายการในประวัติเครื่อง: รหัส + บรรทัดเดียว · สัญลักษณ์เล็กด้านหน้าบอกว่าเช็คแล้วหรือยัง
+              <button key={a.id} className={'device-row' + (current?.id === a.id ? ' on' : '')} onClick={() => open(a)}
+                title={checked(a) ? 'เช็คแล้ว' : s ? 'ข้อมูลเดิม ยังไม่ได้เดินดู' : 'ยังไม่เช็ค'}>
+                <div style={{ fontWeight: 600 }}>
+                  <span style={{ display: 'inline-block', width: 22 }}>{checked(a) ? (s.new_data?.condition === 'ok' ? '✅' : '⚠️') : s ? '📄' : '⬜'}</span>{a.asset_tag}
                 </div>
-                <div className="muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.model || '-'} · {empLabel(a.owner)}</div>
-                {notes[a.asset_tag] && <div style={{ fontSize: '0.75rem', color: '#b45309', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>📝 {notes[a.asset_tag]}</div>}
+                <div className="muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingLeft: 22 }}>{empLabel(a.owner)} · {a.model || '-'}</div>
               </button>
             )
           })}
@@ -210,6 +206,7 @@ export default function SurveyPage() {
                 <h2 style={{ margin: 0 }}>{current.asset_tag}</h2>
                 <span className="muted">{current.model}</span>
               </div>
+              {notes[current.asset_tag] && <div style={{ marginBottom: 8, color: "#b45309" }}>📝 {notes[current.asset_tag]}</div>}
               <div className="muted" style={{ marginBottom: 16 }}>
                 ตามทะเบียนเดิม: ผู้ใช้ <strong>{empLabel(current.owner)}</strong>
                 {empById[current.owner]?.position && <span> · ตำแหน่ง <strong>{empById[current.owner].position}</strong></span>}
