@@ -148,12 +148,12 @@ export default function AssetList({ onEdit, readOnly }) {
                   {notes[it.asset_tag] && <div style={{ fontSize: '0.78rem', color: '#b45309' }}>📝 {notes[it.asset_tag]}</div>}
                 </td>
                 <td style={{ padding: '10px 16px' }}>
-                  <div style={{ fontWeight: 500 }}>{it.model || '-'}</div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{[it.cpu, it.ram, it.storage].filter(Boolean).join(' / ')}</div>
+                  <div style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{it.model || '-'}</div>
+                  {(it.cpu || it.ram || it.storage) && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }} title={[it.cpu, it.ram, it.storage].filter(Boolean).join(' / ')}>{[it.cpu, it.ram, it.storage].filter(Boolean).join(' · ')}</div>}
                 </td>
                 <td style={{ padding: '10px 16px' }}>
                   <div><EmployeeName id={it.owner} map={emp} /></div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{[it.building, it.position_detail, it.location].filter(Boolean).join(' · ') || '-'}</div>
+                  {(() => { const place = [it.building, it.position_detail, it.location].filter(Boolean).join(' · '); const dept = emp[it.owner]?.department; return place && place !== dept ? <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>📍 {place}</div> : null })()}
                 </td>
                 <td style={{ padding: '10px 16px' }}>
                   <span className={`status-badge status-${it.status}`}>{STATUS_TH[it.status] || it.status || '-'}</span>

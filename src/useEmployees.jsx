@@ -28,10 +28,13 @@ export function EmployeeName({ id, map }) {
   if (!e) return <span>{id}</span>
   const left = /^\[ลาออก\]/.test(e.name)
   return (
-    <span>
-      {left && <span className="badge" style={{ background: '#fee2e2', color: '#b91c1c', marginRight: 6 }}>ลาออก</span>}
-      <span style={{ fontWeight: 500, color: left ? '#991b1b' : undefined }}>{e.name.replace(/^\[ลาออก\]\s*/, '')}</span>
-      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}> · {id}{e.department ? ` · ${e.department}` : ''}</span>
+    // ชื่อบรรทัดบน · รหัส/แผนกบรรทัดล่าง ตัวเล็ก — ไม่ให้ขึ้นบรรทัดใหม่กลางชื่อจนดูเละ
+    <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.3, minWidth: 0 }}>
+      <span style={{ fontWeight: 500, color: left ? '#991b1b' : undefined, whiteSpace: 'nowrap' }}>
+        {left && <span className="badge" style={{ background: '#fee2e2', color: '#b91c1c', marginRight: 6 }}>ลาออก</span>}
+        {e.name.replace(/^\[ลาออก\]\s*/, '')}
+      </span>
+      <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>{id}{e.department ? ` · ${e.department}` : ''}</span>
     </span>
   )
 }
