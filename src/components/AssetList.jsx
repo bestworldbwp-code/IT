@@ -9,6 +9,7 @@ const TYPES = { COM: 'คอมพิวเตอร์', NB: 'โน้ตบ�
 
 export default function AssetList({ onEdit, readOnly }) {
   const [items, setItems] = useState([])
+  const [notes, setNotes] = useState({})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
@@ -23,7 +24,11 @@ export default function AssetList({ onEdit, readOnly }) {
     const client = getSupabase()
     if (!client) return
     setLoading(true)
-    const { data, error: err } = await client.from('assets').select('*').order('asset_tag', { ascending: true }).limit(5000)
+    const [{ data, error: err }, cp] = await Promise.all([
+      client.from('assets').select('*').order('asset_tag', { ascending: true }).limit(5000),
+      client.from('computers').select('computer_id, remarks'), // หมายเหตุ/ชื่อเล่นจาก USB ไว้ช่วยจำว่าเครื่องใคร
+    ])
+    setNotes(Object.fromEntries((cp.data || []).filter(c => c.remarks).map(c => [c.computer_id, c.remarks])))
     setLoading(false)
     if (err) { setError(err.message); return }
     setItems((data || []).sort(byTag('asset_tag')))
@@ -140,6 +145,7 @@ export default function AssetList({ onEdit, readOnly }) {
                 <td style={{ padding: '10px 16px' }}>
                   <div><TagLink tag={it.asset_tag} /></div>
                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{machineName(it.asset_tag)}{it.serial ? ` · S/N ${it.serial}` : ''}</div>
+                  {notes[it.asset_tag] && <div style={{ fontSize: '0.78rem', color: '#b45309' }}>📝 {notes[it.asset_tag]}</div>}
                 </td>
                 <td style={{ padding: '10px 16px' }}>
                   <div style={{ fontWeight: 500 }}>{it.model || '-'}</div>

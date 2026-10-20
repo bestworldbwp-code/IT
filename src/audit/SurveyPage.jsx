@@ -17,6 +17,7 @@ const BUILDINGS = ['อาคารสำนักงาน', 'โรงงา�
 
 export default function SurveyPage() {
   const [assets, setAssets] = useState([])
+  const [notes, setNotes] = useState({}) // หมายเหตุ/ชื่อเล่นจาก USB ช่วยจำว่าเครื่องใคร
   const [employees, setEmployees] = useState([])
   const [surveyed, setSurveyed] = useState({}) // asset id -> log
   const [search, setSearch] = useState('')
@@ -35,11 +36,13 @@ export default function SurveyPage() {
     if (!client) return
     const round = currentRound()
     setRound(round)
-    const [a, e, s] = await Promise.all([
+    const [a, e, s, cp] = await Promise.all([
       client.from('assets').select('id, asset_tag, model, owner, location, building, position_detail, status, category').neq('status', 'retired').order('asset_tag'), // เครื่องที่ปลดระวางแล้วไม่ต้องสำรวจ
       client.from('employees').select('employee_id, name, department, position').order('employee_id'),
       client.from('audit_logs').select('*').eq('action', 'survey').eq('new_data->>round', round).order('created_at', { ascending: false }),
+      client.from('computers').select('computer_id, remarks'),
     ])
+    setNotes(Object.fromEntries((cp.data || []).filter(c => c.remarks).map(c => [c.computer_id, c.remarks])))
     const err = a.error || e.error || s.error
     if (err) { alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message); return }
     setAssets((a.data || []).sort(byTag('asset_tag')))
@@ -179,6 +182,7 @@ export default function SurveyPage() {
                   {s && <span style={{ fontSize: '0.75rem' }}>{s.new_data?.condition === 'ok' ? '✅' : COND_LABEL[s.new_data?.condition]?.slice(0, 2)}</span>}
                 </div>
                 <div className="muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.model || '-'} · {empLabel(a.owner)}</div>
+                {notes[a.asset_tag] && <div style={{ fontSize: '0.75rem', color: '#b45309', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>📝 {notes[a.asset_tag]}</div>}
               </button>
             )
           })}
