@@ -3,7 +3,7 @@ import { getSupabase } from '../supabaseClient.js'
 import { RepairSheet } from './RepairFormPage.jsx'
 import { DocHeader, SignatureBlock, DocToolbar, Field, fmtDate, fmtDateTime, machineName, byTag, repairDocNo, guessBrand, textMatch, assetLocation } from './docs.jsx'
 
-const STATUS_TH = { in_use: 'ใช้งาน', stock: 'สำรอง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
+const STATUS_TH = { in_use: 'ใช้งาน', stock: 'ว่าง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
 const LOG_TYPE = { repair: 'ซ่อมแซม / แก้ไข', parts: 'เปลี่ยนอะไหล่', preventive: 'บำรุงรักษาตามแผน', inspection: 'ตรวจเช็ค', update: 'ติดตั้ง / อัปเดต', upgrade: 'อัปเกรด', install: 'ติดตั้ง', backup_check: 'ตรวจสอบสำรองข้อมูล', other: 'อื่น ๆ' }
 const REPAIR_ST = { pending: 'รอรับเรื่อง', in_progress: 'กำลังซ่อม', done: 'ซ่อมเสร็จ' }
 

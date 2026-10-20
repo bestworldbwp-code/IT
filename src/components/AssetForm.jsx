@@ -194,7 +194,7 @@ export default function AssetForm({ assetId, onSaved }) {
           <label>สถานะ</label>
           <select value={data.status || 'in_use'} onChange={(e) => setField('status', e.target.value)}>
             <option value="in_use">ใช้งาน</option>
-            <option value="stock">สำรอง</option>
+            <option value="stock">ว่าง (รอคนใช้)</option>
             <option value="repair">ส่งซ่อม</option>
             <option value="retired">ปลดระวาง / ยกเลิก</option>
           </select>

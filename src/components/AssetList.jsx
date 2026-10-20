@@ -4,7 +4,7 @@ import { getSupabase } from '../supabaseClient.js'
 import { useEmployees, EmployeeName } from '../useEmployees.jsx'
 import { assetUrl, machineName, byTag, tagType, textMatch, exportCSV, today, TagLink } from '../audit/docs.jsx'
 
-const STATUS_TH = { in_use: 'ใช้งาน', stock: 'สำรอง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
+const STATUS_TH = { in_use: 'ใช้งาน', stock: 'ว่าง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
 const TYPES = { COM: 'คอมพิวเตอร์', NB: 'โน้ตบุ๊ก', PNT: 'เครื่องพิมพ์', SRV: 'เซิร์ฟเวอร์', NET: 'เครือข่าย' }
 
 export default function AssetList({ onEdit, readOnly }) {
@@ -99,7 +99,7 @@ export default function AssetList({ onEdit, readOnly }) {
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ width: 180 }}>
           <option value="all">ทุกสถานะ</option>
           <option value="in_use">ใช้งาน</option>
-          <option value="stock">สำรอง</option>
+          <option value="stock">ว่าง (รอคนใช้)</option>
           <option value="repair">ส่งซ่อม</option>
           <option value="retired">ปลดระวาง</option>
         </select>

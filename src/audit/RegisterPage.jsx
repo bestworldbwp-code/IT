@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getSupabase } from '../supabaseClient.js'
 import { DocHeader, SignatureBlock, DocToolbar, fmtDate, downloadText, toCSV, today, machineName, typeThai, byTag, assetLocation } from './docs.jsx'
 
-const STATUS_TH = { in_use: 'ใช้งาน', stock: 'สำรอง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
+const STATUS_TH = { in_use: 'ใช้งาน', stock: 'ว่าง', repair: 'ส่งซ่อม', retired: 'ปลดระวาง' }
 
 // ทะเบียนรายชื่อเครื่องคอมพิวเตอร์และอุปกรณ์ IT (FQP-IT-01:01)
 // คอลัมน์ตามแบบฟอร์มเดิม: ที่ | ชนิด | ชื่อเครื่องจักร | รุ่น | รหัสเครื่องจักร | Capacity | สถานที่ติดตั้ง | วันรับเข้า | RANK
